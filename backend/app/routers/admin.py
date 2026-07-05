@@ -168,7 +168,7 @@ async def seed_demo_admin(db: AsyncSession = Depends(get_db)):
     admin, password = await register_student_account(
         db,
         name="デモ管理者",
-        grade=0,
+        grade=1,
         gender="未設定",
         role="admin",
     )

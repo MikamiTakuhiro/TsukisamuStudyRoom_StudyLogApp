@@ -44,7 +44,7 @@ class StudentCreateResponse(BaseModel):
 
 class AdminCreateRequest(BaseModel):
     name: str
-    grade: int = Field(default=0, ge=0, le=12)
+    grade: int = Field(default=1, ge=1, le=12)
     gender: str = "未設定"
 
 
