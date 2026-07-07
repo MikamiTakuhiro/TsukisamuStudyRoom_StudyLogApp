@@ -1,7 +1,7 @@
-from datetime import datetime
+from datetime import date, datetime
 from uuid import UUID
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text, func
+from sqlalchemy import Boolean, Date, DateTime, ForeignKey, Integer, String, Text, func
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -13,8 +13,14 @@ class Student(Base):
 
     student_id: Mapped[int] = mapped_column(Integer, primary_key=True)
     name: Mapped[str] = mapped_column(String(100))
+    last_name: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    first_name: Mapped[str | None] = mapped_column(String(50), nullable=True)
     grade: Mapped[int] = mapped_column(Integer)
     gender: Mapped[str] = mapped_column(String(20))
+    phone: Mapped[str | None] = mapped_column(String(30), nullable=True)
+    email: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    birth_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    school_name: Mapped[str | None] = mapped_column(String(200), nullable=True)
     user_id: Mapped[str] = mapped_column(String(20), unique=True, index=True)
     password_hash: Mapped[str] = mapped_column(String(255))
     role: Mapped[str] = mapped_column(String(20))

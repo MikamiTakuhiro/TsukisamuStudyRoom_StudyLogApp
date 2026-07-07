@@ -2,7 +2,7 @@ from datetime import date, datetime
 
 from sqlalchemy import Boolean, Date, DateTime, ForeignKey, Integer, String, Text, func
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
 
@@ -38,6 +38,10 @@ class StudyPlan(Base):
     unit: Mapped[str] = mapped_column(String(200))
     target_completion_date: Mapped[date] = mapped_column(Date)
 
+    progress_entries: Mapped[list["ProgressTracking"]] = relationship(
+        back_populates="plan", cascade="all, delete-orphan"
+    )
+
 
 class ProgressTracking(Base):
     __tablename__ = "progress_tracking"
@@ -46,6 +50,8 @@ class ProgressTracking(Base):
     plan_id: Mapped[int] = mapped_column(Integer, ForeignKey("study_plans.plan_id"))
     completion_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     achievement_level: Mapped[str | None] = mapped_column(String(50), nullable=True)
+
+    plan: Mapped["StudyPlan"] = relationship(back_populates="progress_entries")
 
 
 class Notification(Base):

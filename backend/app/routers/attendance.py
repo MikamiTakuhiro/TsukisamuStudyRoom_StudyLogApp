@@ -1,6 +1,6 @@
-from datetime import datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -12,10 +12,12 @@ from app.schemas import (
     ActiveSeatStatus,
     AttendanceResponse,
     AttendanceUpdateRequest,
+    CalendarWeek,
     CheckInRequest,
     StudyRecordCreate,
     StudyRecordResponse,
     TimelineDay,
+    CalendarDay,
 )
 from app.services.auth_service import resolve_effective_student_id
 
@@ -163,6 +165,7 @@ async def timeline(
                 record_id=rec.record_id,
                 subject=rec.subject,
                 topic_unit=rec.topic_unit,
+                study_location=getattr(rec, "study_location", "school") or "school",
                 recorded_at=rec.recorded_at,
             )
         )
@@ -186,11 +189,13 @@ async def create_study_record(
         .limit(1)
     )
     active = active_result.scalar_one_or_none()
+    location = body.study_location or ("school" if active else "home")
     rec = DailyStudyRecord(
         student_id=student_id,
         attendance_id=active.attendance_id if active else None,
         subject=body.subject,
         topic_unit=body.topic_unit,
+        study_location=location,
     )
     db.add(rec)
     await db.commit()
@@ -199,8 +204,88 @@ async def create_study_record(
         record_id=rec.record_id,
         subject=rec.subject,
         topic_unit=rec.topic_unit,
+        study_location=rec.study_location,
         recorded_at=rec.recorded_at,
     )
+
+
+def _week_start_sunday(d: date) -> date:
+    return d - timedelta(days=(d.weekday() + 1) % 7)
+
+
+def _format_time(dt: datetime) -> str:
+    return dt.astimezone(timezone.utc).strftime("%H:%M")
+
+
+@router.get("/calendar", response_model=list[CalendarWeek])
+async def study_calendar(
+    weeks: int = Query(default=26, ge=4, le=104),
+    user: Student = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    student_id = resolve_effective_student_id(user)
+    att_result = await db.execute(
+        select(Attendance, Seat.seat_name).join(Seat, Seat.seat_id == Attendance.seat_id).where(
+            Attendance.student_id == student_id
+        )
+    )
+    study_result = await db.execute(
+        select(DailyStudyRecord).where(DailyStudyRecord.student_id == student_id)
+    )
+
+    day_att: dict[date, list] = {}
+    day_study: dict[date, list] = {}
+    for att, seat_name in att_result.all():
+        d = att.check_in_time.date()
+        day_att.setdefault(d, []).append((att, seat_name))
+    for rec in study_result.scalars():
+        d = rec.recorded_at.date()
+        day_study.setdefault(d, []).append(rec)
+
+    today = date.today()
+    current_week_start = _week_start_sunday(today)
+    calendar_weeks: list[CalendarWeek] = []
+
+    for w in range(weeks):
+        week_start = current_week_start - timedelta(weeks=w)
+        days = []
+        for i in range(7):
+            d = week_start + timedelta(days=i)
+            att_list = day_att.get(d, [])
+            study_list = day_study.get(d, [])
+            has_attendance = len(att_list) > 0
+            has_home = any(getattr(s, "study_location", "school") == "home" for s in study_list)
+
+            if has_attendance and has_home:
+                color = "stripe"
+            elif has_attendance:
+                color = "yellow"
+            elif has_home:
+                color = "navy"
+            else:
+                color = "white"
+
+            lines: list[str] = []
+            for att, seat_name in att_list:
+                cin = _format_time(att.check_in_time)
+                cout = _format_time(att.check_out_time) if att.check_out_time else "未退室"
+                subs = ", ".join(
+                    f"{s.subject}" for s in study_list if getattr(s, "study_location", "school") == "school"
+                )
+                detail = f"塾 {cin}-{cout} ({seat_name or '?'})"
+                if subs:
+                    detail += f" ({subs})"
+                lines.append(detail)
+            for s in study_list:
+                if getattr(s, "study_location", "school") == "home":
+                    t = _format_time(s.recorded_at)
+                    lines.append(f"家 {t} ({s.subject} {s.topic_unit})")
+
+            days.append(CalendarDay(date=d, color=color, summary_lines=lines))
+
+        calendar_weeks.append(CalendarWeek(week_start=week_start, days=days))
+
+    return list(reversed(calendar_weeks))
 
 
 @router.get("/live", response_model=list[ActiveSeatStatus])

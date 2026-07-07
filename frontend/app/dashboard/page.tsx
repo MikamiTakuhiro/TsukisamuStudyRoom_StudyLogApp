@@ -2,28 +2,17 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import AppHeader, { AdminLink } from "@/components/AppHeader";
-import { attendanceApi, notificationsApi, STUDY_OPTIONS, type NotificationItem, type TimelineDay } from "@/lib/api";
+import StudentShell from "@/components/StudentShell";
+import StudyCalendar from "@/components/StudyCalendar";
+import { attendanceApi, notificationsApi, STUDY_OPTIONS, type CalendarWeek, type NotificationItem } from "@/lib/api";
 import { useAuth } from "@/lib/useAuth";
 import { vibrate } from "@/lib/auth";
-
-function formatTime(iso: string) {
-  return new Date(iso).toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" });
-}
-
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString("ja-JP", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-    weekday: "short",
-  });
-}
+import { formatDateJa } from "@/lib/utils";
 
 export default function DashboardPage() {
   const { user, loading } = useAuth();
-  const [timeline, setTimeline] = useState<TimelineDay[]>([]);
-  const [selectedDay, setSelectedDay] = useState<TimelineDay | null>(null);
+  const [weeks, setWeeks] = useState<CalendarWeek[]>([]);
+  const [selectedDay, setSelectedDay] = useState<{ date: string; lines: string[] } | null>(null);
   const [showStudyModal, setShowStudyModal] = useState(false);
   const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
   const [activeSeat, setActiveSeat] = useState<string | null>(null);
@@ -34,7 +23,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (!user) return;
-    attendanceApi.timeline().then(setTimeline).catch(console.error);
+    attendanceApi.calendar(26).then(setWeeks).catch(console.error);
     attendanceApi.active().then((a) => setActiveSeat(a?.seat_name ?? null)).catch(console.error);
     notificationsApi.list().then(setNotifications).catch(console.error);
   }, [user]);
@@ -46,8 +35,7 @@ export default function DashboardPage() {
       vibrate([50, 30, 50]);
       setShowStudyModal(false);
       setSelectedSubject(null);
-      const updated = await attendanceApi.timeline();
-      setTimeline(updated);
+      setWeeks(await attendanceApi.calendar(26));
     } catch (e) {
       alert(e instanceof Error ? e.message : "記録に失敗しました");
     } finally {
@@ -56,66 +44,55 @@ export default function DashboardPage() {
   }
 
   if (loading || !user) {
-    return <div className="flex min-h-full items-center justify-center text-slate-500">読み込み中...</div>;
+    return <div className="flex min-h-full items-center justify-center font-bold text-black">読み込み中...</div>;
   }
 
   return (
-    <div className="relative min-h-full bg-slate-50 pb-24">
-      <AppHeader title={`${user.name} さん`} />
-      <div className="mx-auto max-w-lg px-4 py-4">
-        <div className="mb-4 flex items-center justify-between gap-2">
-          <AdminLink role={user.role} />
-          {activeSeat && (
-            <span className="rounded-full bg-emerald-100 px-3 py-1 text-sm font-medium text-emerald-800">
-              入室中: {activeSeat}
-            </span>
-          )}
-        </div>
+    <StudentShell title={`${user.name} さん`} user={user}>
+      <div className="app-shell relative w-full px-4 py-4 pb-28">
+        {activeSeat && <div className="badge-active mb-4 inline-block">入室中: {activeSeat}</div>}
 
         {!isReadOnly && (
-          <Link
-            href="/scan"
-            className="mb-6 flex w-full items-center justify-center gap-2 rounded-2xl bg-sky-600 py-4 text-lg font-bold text-white shadow-lg hover:bg-sky-700"
-          >
+          <Link href="/scan" className="btn-accent mb-4 w-full text-lg touch-manipulation">
             <span className="text-2xl">📷</span>
             QRコードで入退室
           </Link>
         )}
 
-        {notifications.length > 0 && (
-          <section className="mb-6 space-y-2">
-            {notifications.slice(0, 3).map((n, i) => (
-              <div key={i} className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+        <section className="card mb-4">
+          <h2 className="section-title mb-3">通知・リマインド</h2>
+          {notifications.length === 0 ? (
+            <p className="font-medium text-black">情報なし</p>
+          ) : (
+            notifications.map((n) => (
+              <div
+                key={n.notification_id}
+                className={`mb-2 rounded-xl border-2 p-3 text-sm font-medium text-black ${
+                  n.trigger_gap_detected
+                    ? "border-[var(--navy)] bg-[var(--moon-yellow)]"
+                    : "border-[var(--border)] bg-[var(--surface)]"
+                }`}
+              >
                 {n.content}
               </div>
-            ))}
-          </section>
-        )}
-
-        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500">来塾履歴</h2>
-        <div className="space-y-3">
-          {timeline.length === 0 && (
-            <p className="rounded-xl bg-white p-6 text-center text-slate-500">まだ記録がありません</p>
+            ))
           )}
-          {timeline.map((day) => (
-            <button
-              key={day.date}
-              onClick={() => setSelectedDay(day)}
-              className="w-full rounded-xl border border-slate-200 bg-white p-4 text-left shadow-sm hover:border-sky-300"
-            >
-              <p className="font-semibold text-slate-900">{formatDate(day.date)}</p>
-              <p className="mt-1 text-sm text-slate-600">
-                {day.attendances.length} 回の入退室 / {day.study_records.length} 件の学習記録
-              </p>
-            </button>
-          ))}
-        </div>
+        </section>
+
+        <StudyCalendar
+          weeks={weeks}
+          onDayClick={(week, idx) => {
+            const day = week.days[idx];
+            setSelectedDay({ date: day.date, lines: day.summary_lines });
+          }}
+        />
       </div>
 
       {!isReadOnly && (
         <button
+          type="button"
           onClick={() => setShowStudyModal(true)}
-          className="fixed bottom-6 right-6 flex h-16 w-16 items-center justify-center rounded-full bg-sky-500 text-3xl text-white shadow-xl hover:bg-sky-600"
+          className="fab touch-manipulation"
           aria-label="学習記録を追加"
         >
           +
@@ -124,51 +101,38 @@ export default function DashboardPage() {
 
       {selectedDay && (
         <div className="fixed inset-0 z-50 flex items-end bg-black/40 sm:items-center sm:justify-center">
-          <div className="max-h-[80vh] w-full overflow-y-auto rounded-t-2xl bg-white p-6 sm:max-w-lg sm:rounded-2xl">
-            <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-lg font-bold">{formatDate(selectedDay.date)}</h3>
-              <button onClick={() => setSelectedDay(null)} className="text-slate-500">閉じる</button>
-            </div>
-            <section className="mb-4">
-              <h4 className="mb-2 font-semibold text-slate-700">入退室</h4>
-              {selectedDay.attendances.map((a) => (
-                <div key={a.attendance_id} className="mb-2 rounded-lg bg-slate-50 p-3 text-sm">
-                  <p>座席: {a.seat_name}</p>
-                  <p>入室: {formatTime(a.check_in_time)}</p>
-                  <p>
-                    退室: {a.check_out_time ? formatTime(a.check_out_time) : "未退室"}
-                    {a.is_forgotten_checkout && " (0:00自動退室)"}
-                  </p>
-                </div>
-              ))}
-            </section>
-            <section>
-              <h4 className="mb-2 font-semibold text-slate-700">学習記録</h4>
-              {selectedDay.study_records.length === 0 && (
-                <p className="text-sm text-slate-500">記録なし</p>
-              )}
-              {selectedDay.study_records.map((r) => (
-                <div key={r.record_id} className="mb-2 rounded-lg bg-sky-50 p-3 text-sm">
-                  <p className="font-medium">{r.subject} - {r.topic_unit}</p>
-                  <p className="text-slate-500">{formatTime(r.recorded_at)}</p>
-                </div>
-              ))}
-            </section>
+          <div className="w-full rounded-t-3xl bg-white p-6 sm:rounded-3xl">
+            <h3 className="text-lg font-bold text-black">{formatDateJa(selectedDay.date)}</h3>
+            {selectedDay.lines.length === 0 ? (
+              <p className="mt-3 text-black">情報なし</p>
+            ) : (
+              <ul className="mt-3 space-y-2">
+                {selectedDay.lines.map((line, i) => (
+                  <li key={i} className="rounded-xl bg-[var(--surface)] p-3 text-sm font-medium text-black">
+                    {line}
+                  </li>
+                ))}
+              </ul>
+            )}
+            <button type="button" onClick={() => setSelectedDay(null)} className="btn-secondary mt-4 w-full">
+              閉じる
+            </button>
           </div>
         </div>
       )}
 
       {showStudyModal && (
         <div className="fixed inset-0 z-50 flex items-end bg-black/40 sm:items-center sm:justify-center">
-          <div className="w-full rounded-t-2xl bg-white p-6 sm:max-w-lg sm:rounded-2xl">
-            <h3 className="mb-4 text-lg font-bold">今から勉強する内容</h3>
+          <div className="w-full rounded-t-3xl bg-white p-6 sm:rounded-3xl">
+            <h3 className="mb-4 text-lg font-bold text-black">今から勉強する内容</h3>
             {!selectedSubject ? (
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 gap-3">
                 {Object.keys(STUDY_OPTIONS).map((subject) => (
                   <button
                     key={subject}
+                    type="button"
                     onClick={() => setSelectedSubject(subject)}
-                    className="rounded-xl border border-slate-200 py-4 font-medium hover:border-sky-400 hover:bg-sky-50"
+                    className="btn-secondary py-5 text-base font-bold touch-manipulation"
                   >
                     {subject}
                   </button>
@@ -176,15 +140,16 @@ export default function DashboardPage() {
               </div>
             ) : (
               <div className="space-y-2">
-                <button onClick={() => setSelectedSubject(null)} className="text-sm text-sky-600">
+                <button type="button" onClick={() => setSelectedSubject(null)} className="font-bold text-[var(--navy)]">
                   ← 科目を選び直す
                 </button>
                 {STUDY_OPTIONS[selectedSubject].map((unit) => (
                   <button
                     key={unit}
+                    type="button"
                     disabled={submitting}
                     onClick={() => postStudy(selectedSubject, unit)}
-                    className="block w-full rounded-xl border border-slate-200 py-3 hover:border-sky-400 hover:bg-sky-50 disabled:opacity-50"
+                    className="btn-primary block w-full touch-manipulation disabled:opacity-50"
                   >
                     {unit}
                   </button>
@@ -192,14 +157,18 @@ export default function DashboardPage() {
               </div>
             )}
             <button
-              onClick={() => { setShowStudyModal(false); setSelectedSubject(null); }}
-              className="mt-4 w-full rounded-xl border border-slate-300 py-2 text-slate-600"
+              type="button"
+              onClick={() => {
+                setShowStudyModal(false);
+                setSelectedSubject(null);
+              }}
+              className="btn-secondary mt-4 w-full"
             >
               キャンセル
             </button>
           </div>
         </div>
       )}
-    </div>
+    </StudentShell>
   );
 }

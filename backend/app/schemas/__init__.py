@@ -19,8 +19,26 @@ class UserResponse(BaseModel):
     gender: str
     role: str
     is_read_only: bool
+    phone: str | None = None
+    email: str | None = None
+    birth_date: date | None = None
+    school_name: str | None = None
 
     model_config = {"from_attributes": True}
+
+
+class ProfileUpdateRequest(BaseModel):
+    phone: str | None = None
+    email: str | None = None
+    birth_date: date | None = None
+    school_name: str | None = None
+
+
+class StudentCreateRequest(BaseModel):
+    last_name: str
+    first_name: str
+    grade: int = Field(ge=1, le=12)
+    gender: str
 
 
 class LoginResponse(BaseModel):
@@ -28,12 +46,6 @@ class LoginResponse(BaseModel):
     expires_at: datetime
     session_type: str
     user: UserResponse
-
-
-class StudentCreateRequest(BaseModel):
-    name: str
-    grade: int = Field(ge=1, le=12)
-    gender: str
 
 
 class StudentCreateResponse(BaseModel):
@@ -50,6 +62,11 @@ class AdminCreateRequest(BaseModel):
 
 class SeatCreateRequest(BaseModel):
     seat_name: str
+    qr_code_data: str | None = None
+
+
+class SeatUpdateRequest(BaseModel):
+    seat_name: str | None = None
     qr_code_data: str | None = None
 
 
@@ -80,12 +97,14 @@ class CheckInRequest(BaseModel):
 class StudyRecordCreate(BaseModel):
     subject: str
     topic_unit: str
+    study_location: str | None = None
 
 
 class StudyRecordResponse(BaseModel):
     record_id: int
     subject: str
     topic_unit: str
+    study_location: str = "school"
     recorded_at: datetime
 
     model_config = {"from_attributes": True}
@@ -131,3 +150,131 @@ class ActiveSeatStatus(BaseModel):
     student_name: str | None
     user_id: str | None
     check_in_time: datetime | None
+
+
+class AspirationCreate(BaseModel):
+    target_school: str
+    priority_rank: int = 1
+    date_recorded: date | None = None
+
+
+class AspirationBulkCreate(BaseModel):
+    schools: list[str] = Field(min_length=1, max_length=5)
+
+
+class AspirationUpdate(BaseModel):
+    target_school: str | None = None
+    priority_rank: int | None = None
+    date_recorded: date | None = None
+
+
+class AspirationResponse(BaseModel):
+    aspiration_id: int
+    student_id: int
+    date_recorded: date
+    target_school: str
+    priority_rank: int
+
+    model_config = {"from_attributes": True}
+
+
+class StudyPlanCreate(BaseModel):
+    subject: str
+    unit: str
+    target_completion_date: date
+
+
+class StudyPlanUpdate(BaseModel):
+    subject: str | None = None
+    unit: str | None = None
+    target_completion_date: date | None = None
+
+
+class StudyPlanResponse(BaseModel):
+    plan_id: int
+    student_id: int
+    subject: str
+    unit: str
+    target_completion_date: date
+    progress: list["ProgressResponse"] = []
+
+    model_config = {"from_attributes": True}
+
+
+class ProgressCreate(BaseModel):
+    plan_id: int
+    completion_date: date | None = None
+    achievement_level: str | None = None
+
+
+class ProgressUpdate(BaseModel):
+    completion_date: date | None = None
+    achievement_level: str | None = None
+
+
+class ProgressResponse(BaseModel):
+    progress_id: int
+    plan_id: int
+    completion_date: date | None
+    achievement_level: str | None
+
+    model_config = {"from_attributes": True}
+
+
+class ExamResultCreate(BaseModel):
+    exam_name: str
+    exam_date: date
+    subject_scores: dict = Field(default_factory=dict)
+    total_score: int = 0
+    school_judgment: str | None = None
+
+
+class ExamResultUpdate(BaseModel):
+    exam_name: str | None = None
+    exam_date: date | None = None
+    subject_scores: dict | None = None
+    total_score: int | None = None
+    school_judgment: str | None = None
+
+
+class ExamResultFullResponse(ExamResultResponse):
+    student_id: int
+
+    model_config = {"from_attributes": True}
+
+
+class StudentUpdateRequest(BaseModel):
+    name: str | None = None
+    grade: int | None = Field(default=None, ge=1, le=12)
+    gender: str | None = None
+
+
+class AccountExportResponse(BaseModel):
+    name: str
+    user_id: str
+    parent_user_id: str | None
+    new_password: str
+
+
+class StudentFullProfile(BaseModel):
+    student: UserResponse
+    aspirations: list[AspirationResponse]
+    study_plans: list[StudyPlanResponse]
+    exam_results: list[ExamResultFullResponse]
+    attendances: list[AttendanceResponse]
+    study_records: list[StudyRecordResponse]
+    notifications: list[NotificationResponse]
+
+
+StudyPlanResponse.model_rebuild()
+
+
+class CalendarDay(BaseModel):
+    date: date
+    color: str
+    summary_lines: list[str]
+
+
+class CalendarWeek(BaseModel):
+    week_start: date
+    days: list[CalendarDay]

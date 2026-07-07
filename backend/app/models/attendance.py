@@ -34,4 +34,5 @@ class DailyStudyRecord(Base):
     student_id: Mapped[int] = mapped_column(Integer, ForeignKey("students.student_id"))
     subject: Mapped[str] = mapped_column(String(50))
     topic_unit: Mapped[str] = mapped_column(String(200))
+    study_location: Mapped[str] = mapped_column(String(20), default="school")
     recorded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
