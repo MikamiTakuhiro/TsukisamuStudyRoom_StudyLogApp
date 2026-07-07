@@ -169,6 +169,10 @@ p, span, label, h1, h2, h3, h4, li, td, th, legend {
   padding: 1.25rem;
 }
 
+.dashboard-home .card {
+  padding: 0.875rem 1rem;
+}
+
 .section-title {
   font-size: 0.875rem;
   font-weight: 700;

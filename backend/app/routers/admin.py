@@ -47,6 +47,10 @@ def _user_response(user: Student) -> UserResponse:
         gender=user.gender,
         role=user.role,
         is_read_only=is_read_only_user(user),
+        phone=user.phone,
+        email=user.email,
+        birth_date=user.birth_date,
+        school_name=user.school_name,
     )
 
 
@@ -194,6 +198,14 @@ async def update_student(
         student.grade = body.grade
     if body.gender is not None:
         student.gender = body.gender
+    if body.phone is not None:
+        student.phone = body.phone or None
+    if body.email is not None:
+        student.email = body.email or None
+    if body.birth_date is not None:
+        student.birth_date = body.birth_date
+    if body.school_name is not None:
+        student.school_name = body.school_name or None
     await db.commit()
     await db.refresh(student)
     return _user_response(student)

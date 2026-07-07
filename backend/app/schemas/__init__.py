@@ -247,6 +247,10 @@ class StudentUpdateRequest(BaseModel):
     name: str | None = None
     grade: int | None = Field(default=None, ge=1, le=12)
     gender: str | None = None
+    phone: str | None = None
+    email: str | None = None
+    birth_date: date | None = None
+    school_name: str | None = None
 
 
 class AccountExportResponse(BaseModel):

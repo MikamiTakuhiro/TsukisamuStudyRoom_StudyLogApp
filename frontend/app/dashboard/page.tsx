@@ -48,26 +48,29 @@ export default function DashboardPage() {
   }
 
   return (
-    <StudentShell title={`${user.name} さん`} user={user}>
-      <div className="app-shell relative w-full px-4 py-4 pb-28">
-        {activeSeat && <div className="badge-active mb-4 inline-block">入室中: {activeSeat}</div>}
+    <StudentShell title={`${user.name} さん`} user={user} fillViewport>
+      <div className="dashboard-home app-shell flex min-h-0 flex-1 flex-col gap-2 overflow-hidden px-4 py-2 pb-20">
+        {activeSeat && <div className="badge-active shrink-0">入室中: {activeSeat}</div>}
 
         {!isReadOnly && (
-          <Link href="/scan" className="btn-accent mb-4 w-full text-lg touch-manipulation">
-            <span className="text-2xl">📷</span>
+          <Link
+            href="/scan"
+            className="btn-accent w-full shrink-0 touch-manipulation py-3 text-base min-h-[3rem]"
+          >
+            <span className="text-xl">📷</span>
             QRコードで入退室
           </Link>
         )}
 
-        <section className="card mb-4">
-          <h2 className="section-title mb-3">通知・リマインド</h2>
+        <section className="card shrink-0 overflow-y-auto py-3 max-h-[min(28vh,12rem)]">
+          <h2 className="section-title mb-2">通知・リマインド</h2>
           {notifications.length === 0 ? (
-            <p className="font-medium text-black">情報なし</p>
+            <p className="text-sm font-medium text-black">情報なし</p>
           ) : (
             notifications.map((n) => (
               <div
                 key={n.notification_id}
-                className={`mb-2 rounded-xl border-2 p-3 text-sm font-medium text-black ${
+                className={`mb-2 last:mb-0 rounded-xl border-2 p-2.5 text-sm font-medium text-black ${
                   n.trigger_gap_detected
                     ? "border-[var(--navy)] bg-[var(--moon-yellow)]"
                     : "border-[var(--border)] bg-[var(--surface)]"
@@ -80,6 +83,7 @@ export default function DashboardPage() {
         </section>
 
         <StudyCalendar
+          fillHeight
           weeks={weeks}
           onDayClick={(week, idx) => {
             const day = week.days[idx];

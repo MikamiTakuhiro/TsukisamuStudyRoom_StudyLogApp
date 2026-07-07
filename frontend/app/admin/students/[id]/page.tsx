@@ -14,7 +14,7 @@ import {
   type StudentFullProfile,
 } from "@/lib/api";
 import { useAuth } from "@/lib/useAuth";
-import { displayValue, formatDateJa, formatTimeJa } from "@/lib/utils";
+import { formatTimeJa } from "@/lib/utils";
 
 export default function AdminStudentDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -33,6 +33,7 @@ export default function AdminStudentDetailPage() {
   }, [user, studentId]);
 
   const [studentForm, setStudentForm] = useState({ name: "", grade: 1, gender: "" });
+  const [profileForm, setProfileForm] = useState({ phone: "", email: "", birth_date: "", school_name: "" });
 
   useEffect(() => {
     if (profile) {
@@ -41,8 +42,19 @@ export default function AdminStudentDetailPage() {
         grade: profile.student.grade,
         gender: profile.student.gender,
       });
+      setProfileForm({
+        phone: profile.student.phone ?? "",
+        email: profile.student.email ?? "",
+        birth_date: profile.student.birth_date ?? "",
+        school_name: profile.student.school_name ?? "",
+      });
     }
   }, [profile]);
+
+  function profileDisplay(value: string | null | undefined) {
+    if (!value) return "未記入";
+    return value;
+  }
 
   if (loading || !user) return <div className="p-8 font-bold text-black">読み込み中...</div>;
   if (user.role !== "admin") {
@@ -85,6 +97,68 @@ export default function AdminStudentDetailPage() {
             </button>
           </form>
           <p className="mt-2 text-sm font-medium text-black">ID: {profile.student.user_id}</p>
+        </section>
+
+        <section className="card">
+          <h2 className="section-title mb-3">連絡先・プロフィール（編集可）</h2>
+          <div className="mb-4 space-y-1 text-sm text-black">
+            <p>電話番号: {profileDisplay(profile.student.phone)}</p>
+            <p>メールアドレス: {profileDisplay(profile.student.email)}</p>
+            <p>生年月日: {profileDisplay(profile.student.birth_date)}</p>
+            <p>学校名: {profileDisplay(profile.student.school_name)}</p>
+          </div>
+          <form
+            className="grid gap-3 sm:grid-cols-2"
+            onSubmit={async (e) => {
+              e.preventDefault();
+              await adminApi.updateStudent(studentId, {
+                phone: profileForm.phone || null,
+                email: profileForm.email || null,
+                birth_date: profileForm.birth_date || null,
+                school_name: profileForm.school_name || null,
+              });
+              setSaved("連絡先・プロフィールを保存しました");
+              reload();
+            }}
+          >
+            <div>
+              <Label>電話番号（任意）</Label>
+              <Input
+                value={profileForm.phone}
+                onChange={(e) => setProfileForm({ ...profileForm, phone: e.target.value })}
+                inputMode="tel"
+                placeholder="未記入"
+              />
+            </div>
+            <div>
+              <Label>メールアドレス（任意）</Label>
+              <Input
+                type="email"
+                value={profileForm.email}
+                onChange={(e) => setProfileForm({ ...profileForm, email: e.target.value })}
+                placeholder="未記入"
+              />
+            </div>
+            <div>
+              <Label>生年月日（任意）</Label>
+              <Input
+                type="date"
+                value={profileForm.birth_date}
+                onChange={(e) => setProfileForm({ ...profileForm, birth_date: e.target.value })}
+              />
+            </div>
+            <div>
+              <Label>学校名（任意）</Label>
+              <Input
+                value={profileForm.school_name}
+                onChange={(e) => setProfileForm({ ...profileForm, school_name: e.target.value })}
+                placeholder="未記入"
+              />
+            </div>
+            <button type="submit" className="btn-primary sm:col-span-2">
+              保存
+            </button>
+          </form>
         </section>
 
         <section className="card">

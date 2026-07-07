@@ -245,8 +245,18 @@ export const academicApi = {
 export const adminApi = {
   students: () => apiFetch<User[]>("/api/admin/students"),
   studentFull: (id: number) => apiFetch<StudentFullProfile>(`/api/admin/students/${id}/full`),
-  updateStudent: (id: number, data: { name?: string; grade?: number; gender?: string }) =>
-    apiFetch<User>(`/api/admin/students/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
+  updateStudent: (
+    id: number,
+    data: {
+      name?: string;
+      grade?: number;
+      gender?: string;
+      phone?: string | null;
+      email?: string | null;
+      birth_date?: string | null;
+      school_name?: string | null;
+    },
+  ) => apiFetch<User>(`/api/admin/students/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
   exportAccount: (id: number) =>
     apiFetch<AccountExport>(`/api/admin/students/${id}/account-export`, { method: "POST" }),
   createStudent: (data: { last_name: string; first_name: string; grade: number; gender: string }) =>

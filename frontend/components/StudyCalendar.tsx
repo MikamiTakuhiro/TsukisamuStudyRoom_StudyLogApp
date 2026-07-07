@@ -47,9 +47,11 @@ function dayNumberClass(color: string) {
 export default function StudyCalendar({
   weeks,
   onDayClick,
+  fillHeight = false,
 }: {
   weeks: CalendarWeek[];
   onDayClick: (week: CalendarWeek, dayIndex: number) => void;
+  fillHeight?: boolean;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -101,10 +103,12 @@ export default function StudyCalendar({
   }, [weeks, updateVisibleMonth]);
 
   return (
-    <div className="calendar-shell card mb-6">
-      <h2 className="section-title mb-2 px-1">学習履歴カレンダー</h2>
+    <div
+      className={`calendar-shell card flex min-h-0 flex-col ${fillHeight ? "mb-0 h-full flex-1" : "mb-6"}`}
+    >
+      <h2 className="section-title mb-2 shrink-0 px-1">学習履歴カレンダー</h2>
 
-      <div className="calendar-chrome sticky top-0 z-10 bg-white">
+      <div className={`calendar-chrome z-10 shrink-0 bg-white ${fillHeight ? "" : "sticky top-0"}`}>
         <div className="border-b border-[var(--border)] px-2 py-2.5">
           <p className="text-center text-lg font-bold tracking-tight text-[var(--navy)]">
             {visibleYear}年{visibleMonth}月
@@ -122,7 +126,9 @@ export default function StudyCalendar({
 
       <div
         ref={scrollRef}
-        className="calendar-scroll max-h-[380px] overflow-y-auto overscroll-contain px-0.5 pb-1"
+        className={`calendar-scroll overscroll-contain px-0.5 pb-1 ${
+          fillHeight ? "min-h-0 flex-1 overflow-y-auto" : "max-h-[380px] overflow-y-auto"
+        }`}
         onScroll={updateVisibleMonth}
       >
         {weeks.map((week, wi) => {
@@ -148,7 +154,9 @@ export default function StudyCalendar({
                     key={day.date}
                     type="button"
                     onClick={() => onDayClick(week, idx)}
-                    className={`calendar-day-cell relative min-h-[56px] w-full rounded-md border ${cellClass(day.color)} touch-manipulation active:opacity-90`}
+                    className={`calendar-day-cell relative w-full rounded-md border ${cellClass(day.color)} touch-manipulation active:opacity-90 ${
+                      fillHeight ? "min-h-[40px]" : "min-h-[56px]"
+                    }`}
                     aria-label={formatDateJa(day.date)}
                   >
                     <span
@@ -165,7 +173,7 @@ export default function StudyCalendar({
         <div ref={bottomRef} className="h-1" />
       </div>
 
-      <div className="mt-3 flex flex-wrap gap-2 border-t border-[var(--border)] px-1 pt-3 text-xs font-bold text-black">
+      <div className="mt-2 flex shrink-0 flex-wrap gap-2 border-t border-[var(--border)] px-1 pt-2 text-xs font-bold text-black">
         <span className="inline-flex items-center gap-1">
           <span className="inline-block h-4 w-4 rounded border border-[var(--navy)] bg-[var(--moon-yellow)]" /> 塾
         </span>
