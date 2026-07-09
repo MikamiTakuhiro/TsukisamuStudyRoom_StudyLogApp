@@ -2,14 +2,17 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import StudentShell from "@/components/StudentShell";
 import StudyCalendar from "@/components/StudyCalendar";
+import NotificationRow, { notificationTypeLabel, studyPlanFocusUrl } from "@/components/NotificationRow";
 import { attendanceApi, notificationsApi, STUDY_OPTIONS, type CalendarWeek, type NotificationItem } from "@/lib/api";
 import { useAuth } from "@/lib/useAuth";
 import { vibrate } from "@/lib/auth";
-import { formatDateJa } from "@/lib/utils";
+import { formatDateJa, formatDateTimeJa } from "@/lib/utils";
 
 export default function DashboardPage() {
+  const router = useRouter();
   const { user, loading } = useAuth();
   const [weeks, setWeeks] = useState<CalendarWeek[]>([]);
   const [selectedDay, setSelectedDay] = useState<{ date: string; lines: string[] } | null>(null);
@@ -17,15 +20,21 @@ export default function DashboardPage() {
   const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
   const [activeSeat, setActiveSeat] = useState<string | null>(null);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+  const [openMenuId, setOpenMenuId] = useState<number | null>(null);
+  const [detailNotification, setDetailNotification] = useState<NotificationItem | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   const isReadOnly = user?.is_read_only ?? false;
+
+  async function reloadNotifications() {
+    setNotifications(await notificationsApi.list());
+  }
 
   useEffect(() => {
     if (!user) return;
     attendanceApi.calendar(26).then(setWeeks).catch(console.error);
     attendanceApi.active().then((a) => setActiveSeat(a?.seat_name ?? null)).catch(console.error);
-    notificationsApi.list().then(setNotifications).catch(console.error);
+    reloadNotifications().catch(console.error);
   }, [user]);
 
   async function postStudy(subject: string, unit: string) {
@@ -62,22 +71,48 @@ export default function DashboardPage() {
           </Link>
         )}
 
-        <section className="card shrink-0 overflow-y-auto py-3 max-h-[min(28vh,12rem)]">
+        <section
+          className={`card shrink-0 py-3 ${
+            openMenuId ? "overflow-visible" : "max-h-[min(28vh,12rem)] overflow-y-auto"
+          }`}
+        >
           <h2 className="section-title mb-2">通知・リマインド</h2>
           {notifications.length === 0 ? (
             <p className="text-sm font-medium text-black">情報なし</p>
           ) : (
             notifications.map((n) => (
-              <div
+              <NotificationRow
                 key={n.notification_id}
-                className={`mb-2 last:mb-0 rounded-xl border-2 p-2.5 text-sm font-medium text-black ${
-                  n.trigger_gap_detected
-                    ? "border-[var(--navy)] bg-[var(--moon-yellow)]"
-                    : "border-[var(--border)] bg-[var(--surface)]"
-                }`}
-              >
-                {n.content}
-              </div>
+                notification={n}
+                menuOpen={openMenuId === n.notification_id}
+                isReadOnly={isReadOnly}
+                onMenuToggle={() =>
+                  setOpenMenuId((prev) => (prev === n.notification_id ? null : n.notification_id))
+                }
+                onMenuClose={() => setOpenMenuId(null)}
+                onDetail={() => {
+                  setOpenMenuId(null);
+                  setDetailNotification(n);
+                }}
+                onUpdatePlan={
+                  n.notification_type === "plan_gap" || n.trigger_gap_detected
+                    ? () => {
+                        setOpenMenuId(null);
+                        router.push(studyPlanFocusUrl(n.content));
+                      }
+                    : undefined
+                }
+                onDelete={async () => {
+                  setOpenMenuId(null);
+                  if (!confirm("この通知を削除しますか？")) return;
+                  try {
+                    await notificationsApi.delete(n.notification_id);
+                    await reloadNotifications();
+                  } catch (e) {
+                    alert(e instanceof Error ? e.message : "削除に失敗しました");
+                  }
+                }}
+              />
             ))
           )}
         </section>
@@ -169,6 +204,41 @@ export default function DashboardPage() {
               className="btn-secondary mt-4 w-full"
             >
               キャンセル
+            </button>
+          </div>
+        </div>
+      )}
+
+      {detailNotification && (
+        <div className="fixed inset-0 z-50 flex items-end bg-black/40 sm:items-center sm:justify-center">
+          <div className="w-full rounded-t-3xl bg-white p-6 sm:max-w-md sm:rounded-3xl">
+            <h3 className="text-lg font-bold text-black">通知の詳細</h3>
+            <dl className="mt-4 space-y-3 text-sm text-black">
+              <div>
+                <dt className="font-bold text-[var(--navy)]">種類</dt>
+                <dd className="mt-1">{notificationTypeLabel(detailNotification.notification_type)}</dd>
+              </div>
+              <div>
+                <dt className="font-bold text-[var(--navy)]">内容</dt>
+                <dd className="mt-1 whitespace-pre-wrap">{detailNotification.content}</dd>
+              </div>
+              <div>
+                <dt className="font-bold text-[var(--navy)]">送信日時</dt>
+                <dd className="mt-1">{formatDateTimeJa(detailNotification.sent_at)}</dd>
+              </div>
+              {detailNotification.trigger_gap_detected && (
+                <div>
+                  <dt className="font-bold text-[var(--navy)]">関連</dt>
+                  <dd className="mt-1">
+                    <Link href={studyPlanFocusUrl(detailNotification.content)} className="font-bold text-[var(--navy)] underline">
+                      学習計画を確認する
+                    </Link>
+                  </dd>
+                </div>
+              )}
+            </dl>
+            <button type="button" onClick={() => setDetailNotification(null)} className="btn-secondary mt-6 w-full">
+              閉じる
             </button>
           </div>
         </div>

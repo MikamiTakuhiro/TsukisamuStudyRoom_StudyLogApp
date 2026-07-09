@@ -291,6 +291,10 @@ export const profileApi = {
 
 export const notificationsApi = {
   list: () => apiFetch<NotificationItem[]>("/api/notifications"),
+  get: (id: number) => apiFetch<NotificationItem>(`/api/notifications/${id}`),
+  update: (id: number, data: { content?: string }) =>
+    apiFetch<NotificationItem>(`/api/notifications/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
+  delete: (id: number) => apiFetch<{ ok: boolean }>(`/api/notifications/${id}`, { method: "DELETE" }),
 };
 
 export const STUDY_OPTIONS: Record<string, string[]> = {

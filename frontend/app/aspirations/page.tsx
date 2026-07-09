@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import StudentShell from "@/components/StudentShell";
+import AspirationChart from "@/components/AspirationChart";
 import { Input, Label, EmptyState } from "@/components/ui/Input";
 import { academicApi, type Aspiration } from "@/lib/api";
+import { dedupeLatestPerDate, groupAspirationsByDate } from "@/lib/aspirations";
 import { useAuth } from "@/lib/useAuth";
 import { displayValue, formatDateJa } from "@/lib/utils";
 
@@ -22,6 +24,9 @@ export default function AspirationsPage() {
   useEffect(() => {
     if (user) reload().catch(console.error);
   }, [user]);
+
+  const displayItems = useMemo(() => dedupeLatestPerDate(items), [items]);
+  const groupedItems = useMemo(() => groupAspirationsByDate(displayItems), [displayItems]);
 
   if (loading || !user) return <div className="p-8 font-bold text-black">読み込み中...</div>;
 
@@ -68,14 +73,29 @@ export default function AspirationsPage() {
         )}
 
         <section className="card">
+          <h2 className="section-title mb-3">志望校の推移</h2>
+          {displayItems.length === 0 ? (
+            <EmptyState />
+          ) : (
+            <AspirationChart items={displayItems} />
+          )}
+        </section>
+
+        <section className="card">
           <h2 className="section-title mb-3">登録済みの志望校</h2>
-          {items.length === 0 && <EmptyState />}
-          {items.map((a) => (
-            <div key={a.aspiration_id} className="mb-2 rounded-xl bg-[var(--surface)] p-3">
-              <p className="font-bold text-black">
-                第{displayValue(a.priority_rank)}志望: {displayValue(a.target_school)}
+          {displayItems.length === 0 && <EmptyState />}
+          {groupedItems.map((group) => (
+            <div key={group.date} className="mb-4 last:mb-0">
+              <p className="mb-2 text-xs font-bold tracking-wide text-[var(--navy)]">
+                {formatDateJa(group.date)}
               </p>
-              <p className="text-sm text-black">記録日: {formatDateJa(a.date_recorded)}</p>
+              {group.entries.map((a) => (
+                <div key={a.aspiration_id} className="mb-2 rounded-xl bg-[var(--surface)] p-3 last:mb-0">
+                  <p className="font-bold text-black">
+                    第{displayValue(a.priority_rank)}志望: {displayValue(a.target_school)}
+                  </p>
+                </div>
+              ))}
             </div>
           ))}
         </section>

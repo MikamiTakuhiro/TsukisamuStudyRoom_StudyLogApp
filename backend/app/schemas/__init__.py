@@ -144,6 +144,10 @@ class NotificationResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class NotificationUpdateRequest(BaseModel):
+    content: str | None = None
+
+
 class ActiveSeatStatus(BaseModel):
     seat_id: int
     seat_name: str

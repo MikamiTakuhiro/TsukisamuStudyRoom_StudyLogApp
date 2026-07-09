@@ -223,3 +223,113 @@ p, span, label, h1, h2, h3, h4, li, td, th, legend {
     var(--navy) 12px
   );
 }
+
+.progress-slide {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition:
+    grid-template-rows 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 0.3s ease-out;
+}
+
+.progress-slide.is-open {
+  grid-template-rows: 1fr;
+  opacity: 1;
+}
+
+.progress-slide-inner {
+  overflow: hidden;
+  min-height: 0;
+}
+
+.progress-slide-form {
+  margin-top: 0.5rem;
+  padding: 0.75rem;
+  border-radius: 1rem;
+  border: 2px solid var(--moon-yellow);
+  background: #ffffff;
+  transform: translateY(-1.25rem);
+  opacity: 0;
+  transition:
+    transform 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 0.3s ease-out;
+}
+
+.progress-slide.is-open .progress-slide-form {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+.notification-menu-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2rem;
+  min-height: 2rem;
+  padding: 0 0.375rem;
+  border-radius: 0.5rem;
+  border: none;
+  background: transparent;
+  color: #000000;
+  font-size: 1.125rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.notification-menu-trigger:hover {
+  background: rgba(0, 0, 0, 0.06);
+}
+
+.notification-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 0.25rem);
+  z-index: 20;
+  min-width: 9.5rem;
+  overflow: hidden;
+  border-radius: 0.75rem;
+  border: 2px solid var(--border);
+  background: #ffffff;
+  box-shadow: 0 4px 16px rgba(26, 39, 68, 0.15);
+}
+
+.notification-menu-item {
+  display: block;
+  width: 100%;
+  padding: 0.625rem 1rem;
+  border: none;
+  background: #ffffff;
+  color: #000000;
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.notification-menu-item:hover {
+  background: var(--surface);
+}
+
+.notification-menu-item + .notification-menu-item {
+  border-top: 1px solid var(--border);
+}
+
+.notification-menu-item-danger {
+  color: #dc2626;
+}
+
+.study-plan-focus {
+  box-shadow: 0 0 0 3px var(--navy);
+  transition: box-shadow 0.3s ease-out;
+}
+
+.aspiration-chart-axis-label {
+  fill: #000000;
+  font-size: 11px;
+  font-weight: 600;
+}
