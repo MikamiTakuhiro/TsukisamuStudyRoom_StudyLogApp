@@ -135,7 +135,7 @@ export default function AspirationChart({ items }: Props) {
                 d={line.pathD}
                 fill="none"
                 stroke={line.color}
-                strokeWidth={2.5}
+                strokeWidth={4}
                 strokeLinejoin="round"
                 strokeLinecap="round"
               />
@@ -145,10 +145,10 @@ export default function AspirationChart({ items }: Props) {
                 key={`${line.school}-${pt.date}`}
                 cx={pt.x}
                 cy={pt.y}
-                r={5}
+                r={7}
                 fill={line.color}
                 stroke="#ffffff"
-                strokeWidth={2}
+                strokeWidth={2.5}
               >
                 <title>
                   {line.school}（第{pt.rank}志望・{formatAxisDate(pt.date)}）
@@ -163,7 +163,7 @@ export default function AspirationChart({ items }: Props) {
         {chart.lines.map((line) => (
           <div key={line.school} className="flex items-center gap-2 text-sm font-medium text-black">
             <span
-              className="inline-block h-0.5 w-5 shrink-0 rounded-full"
+              className="inline-block h-1 w-5 shrink-0 rounded-full"
               style={{ backgroundColor: line.color }}
             />
             <span>{line.school}</span>

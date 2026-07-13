@@ -69,10 +69,18 @@ export type TimelineDay = {
   }[];
 };
 
+export type CalendarTargetPlan = {
+  plan_id: number;
+  subject: string;
+  unit: string;
+};
+
 export type CalendarDay = {
   date: string;
   color: string;
   summary_lines: string[];
+  target_plans: CalendarTargetPlan[];
+  is_today: boolean;
 };
 
 export type CalendarWeek = {
@@ -224,7 +232,12 @@ export const academicApi = {
   deleteStudyPlan: (id: number) =>
     apiFetch(`/api/academic/study-plans/${id}`, { method: "DELETE" }),
 
-  createProgress: (data: { plan_id: number; completion_date?: string; achievement_level?: string }) =>
+  createProgress: (data: {
+    plan_id: number;
+    completion_date?: string;
+    achievement_level?: string;
+    target_completion_date?: string;
+  }) =>
     apiFetch<Progress>("/api/academic/progress", { method: "POST", body: JSON.stringify(data) }),
   updateProgress: (id: number, data: Partial<Progress>) =>
     apiFetch<Progress>(`/api/academic/progress/${id}`, { method: "PUT", body: JSON.stringify(data) }),

@@ -209,6 +209,7 @@ class ProgressCreate(BaseModel):
     plan_id: int
     completion_date: date | None = None
     achievement_level: str | None = None
+    target_completion_date: date | None = None
 
 
 class ProgressUpdate(BaseModel):
@@ -277,10 +278,18 @@ class StudentFullProfile(BaseModel):
 StudyPlanResponse.model_rebuild()
 
 
+class CalendarTargetPlan(BaseModel):
+    plan_id: int
+    subject: str
+    unit: str
+
+
 class CalendarDay(BaseModel):
     date: date
     color: str
     summary_lines: list[str]
+    target_plans: list[CalendarTargetPlan] = []
+    is_today: bool = False
 
 
 class CalendarWeek(BaseModel):

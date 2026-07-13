@@ -155,8 +155,8 @@ export default function StudyCalendar({
                     type="button"
                     onClick={() => onDayClick(week, idx)}
                     className={`calendar-day-cell relative w-full rounded-md border ${cellClass(day.color)} ${
-                      fillHeight ? "min-h-[40px]" : "min-h-[56px]"
-                    }`}
+                      day.is_today ? "calendar-day-today" : ""
+                    } ${fillHeight ? "min-h-[40px]" : "min-h-[56px]"}`}
                     aria-label={formatDateJa(day.date)}
                   >
                     <span
@@ -164,6 +164,12 @@ export default function StudyCalendar({
                     >
                       {parseDate(day.date).day}
                     </span>
+                    {((day.target_plans?.length ?? 0) > 0) && (
+                      <span
+                        className="absolute bottom-1 right-1 h-2 w-2 rounded-full bg-red-500"
+                        aria-hidden="true"
+                      />
+                    )}
                   </button>
                 ))}
               </div>
@@ -182,6 +188,9 @@ export default function StudyCalendar({
         </span>
         <span className="inline-flex items-center gap-1">
           <span className="inline-block h-4 w-4 rounded border border-[var(--navy)] calendar-stripe" /> 塾+家
+        </span>
+        <span className="inline-flex items-center gap-1">
+          <span className="inline-block h-2 w-2 rounded-full bg-red-500" /> 目標
         </span>
       </div>
     </div>

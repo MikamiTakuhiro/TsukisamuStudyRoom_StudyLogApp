@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import StudentShell from "@/components/StudentShell";
 import StudyCalendar from "@/components/StudyCalendar";
 import NotificationRow, { notificationTypeLabel, studyPlanFocusUrl } from "@/components/NotificationRow";
-import { attendanceApi, notificationsApi, STUDY_OPTIONS, type CalendarWeek, type NotificationItem } from "@/lib/api";
+import { attendanceApi, notificationsApi, STUDY_OPTIONS, type CalendarTargetPlan, type CalendarWeek, type NotificationItem } from "@/lib/api";
 import { useAuth } from "@/lib/useAuth";
 import { vibrate } from "@/lib/auth";
 import { formatDateJa, formatDateTimeJa } from "@/lib/utils";
@@ -15,7 +15,11 @@ export default function DashboardPage() {
   const router = useRouter();
   const { user, loading } = useAuth();
   const [weeks, setWeeks] = useState<CalendarWeek[]>([]);
-  const [selectedDay, setSelectedDay] = useState<{ date: string; lines: string[] } | null>(null);
+  const [selectedDay, setSelectedDay] = useState<{
+    date: string;
+    lines: string[];
+    targetPlans: CalendarTargetPlan[];
+  } | null>(null);
   const [showStudyModal, setShowStudyModal] = useState(false);
   const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
   const [activeSeat, setActiveSeat] = useState<string | null>(null);
@@ -50,6 +54,15 @@ export default function DashboardPage() {
     } finally {
       setSubmitting(false);
     }
+  }
+
+  function studyPlanEditUrl(plan: CalendarTargetPlan) {
+    const params = new URLSearchParams({
+      subject: plan.subject,
+      unit: plan.unit,
+      openProgress: "1",
+    });
+    return `/study-plans?${params.toString()}`;
   }
 
   if (loading || !user) {
@@ -124,7 +137,11 @@ export default function DashboardPage() {
           weeks={weeks}
           onDayClick={(week, idx) => {
             const day = week.days[idx];
-            setSelectedDay({ date: day.date, lines: day.summary_lines });
+            setSelectedDay({
+              date: day.date,
+              lines: day.summary_lines,
+              targetPlans: day.target_plans ?? [],
+            });
           }}
         />
       </div>
@@ -144,16 +161,43 @@ export default function DashboardPage() {
         <div className="modal-overlay items-end sm:items-center sm:justify-center">
           <div className="modal-panel w-full rounded-t-3xl bg-white p-6 sm:rounded-3xl">
             <h3 className="text-lg font-bold text-black">{formatDateJa(selectedDay.date)}</h3>
-            {selectedDay.lines.length === 0 ? (
+            {selectedDay.lines.length > 0 && (
+              <div className="mt-3">
+                <p className="text-sm font-bold text-[var(--navy)]">学習記録</p>
+                <ul className="mt-2 space-y-2">
+                  {selectedDay.lines.map((line, i) => (
+                    <li key={i} className="rounded-xl bg-[var(--surface)] p-3 text-sm font-medium text-black">
+                      {line}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {selectedDay.targetPlans.length > 0 && (
+              <div className="mt-3">
+                <p className="text-sm font-bold text-[var(--navy)]">完了目標</p>
+                <ul className="mt-2 space-y-2">
+                  {selectedDay.targetPlans.map((plan) => (
+                    <li key={plan.plan_id}>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedDay(null);
+                          router.push(studyPlanEditUrl(plan));
+                        }}
+                        className="w-full rounded-xl border-2 border-red-400/60 bg-red-50 p-3 text-left text-sm font-medium text-black touch-manipulation"
+                      >
+                        <span className="mr-2 inline-block h-2 w-2 rounded-full bg-red-500 align-middle" />
+                        {plan.subject} — {plan.unit}
+                        <span className="mt-1 block text-xs font-bold text-[var(--navy)]">学習計画を編集する →</span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {selectedDay.lines.length === 0 && selectedDay.targetPlans.length === 0 && (
               <p className="mt-3 text-black">情報なし</p>
-            ) : (
-              <ul className="mt-3 space-y-2">
-                {selectedDay.lines.map((line, i) => (
-                  <li key={i} className="rounded-xl bg-[var(--surface)] p-3 text-sm font-medium text-black">
-                    {line}
-                  </li>
-                ))}
-              </ul>
             )}
             <button type="button" onClick={() => setSelectedDay(null)} className="btn-secondary mt-4 w-full">
               閉じる

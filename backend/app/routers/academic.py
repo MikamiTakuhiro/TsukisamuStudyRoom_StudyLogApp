@@ -282,11 +282,14 @@ async def create_progress(
     sid = _student_id_for(user, plan.student_id)
     if plan.student_id != sid:
         raise HTTPException(status_code=403, detail="権限がありません")
+    completion_date = today_app() if body.achievement_level == "完了" else None
     pt = ProgressTracking(
         plan_id=body.plan_id,
-        completion_date=body.completion_date,
+        completion_date=completion_date,
         achievement_level=body.achievement_level,
     )
+    if body.target_completion_date is not None:
+        plan.target_completion_date = body.target_completion_date
     db.add(pt)
     await db.commit()
     await db.refresh(pt)

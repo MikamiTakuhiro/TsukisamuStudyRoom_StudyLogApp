@@ -316,6 +316,15 @@ a.btn-secondary {
   border: 2px solid var(--navy);
 }
 
+.badge-complete {
+  border-radius: 9999px;
+  background: var(--navy);
+  color: #ffffff;
+  font-weight: 700;
+  padding: 0.125rem 0.5rem;
+  font-size: 0.75rem;
+}
+
 .fab {
   position: fixed;
   bottom: 1.5rem;
@@ -505,6 +514,12 @@ a.btn-secondary {
 .calendar-day-cell:active {
   transform: scale(0.92);
   opacity: 0.85;
+}
+
+.calendar-day-today {
+  border-width: 2.5px !important;
+  border-color: var(--navy) !important;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--navy) 35%, transparent);
 }
 
 .selectable-card {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import StudentShell from "@/components/StudentShell";
 import { Input, Label, Select, EmptyState } from "@/components/ui/Input";
 import { academicApi, SUBJECTS, ACHIEVEMENT_LEVELS, type StudyPlan } from "@/lib/api";
@@ -9,9 +9,34 @@ import { displayValue, formatDateJa } from "@/lib/utils";
 
 const SLIDE_MS = 350;
 
-const defaultProgressForm = () => ({
+function isPlanCompleted(plan: StudyPlan): boolean {
+  return plan.progress.some((pr) => pr.completion_date != null);
+}
+
+function latestCompletionDate(plan: StudyPlan): string | null {
+  const dates = plan.progress
+    .map((pr) => pr.completion_date)
+    .filter((d): d is string => d != null);
+  return dates.length > 0 ? dates[dates.length - 1] : null;
+}
+
+function sortPlans(plans: StudyPlan[]): StudyPlan[] {
+  const incomplete = plans.filter((p) => !isPlanCompleted(p));
+  const completed = plans.filter((p) => isPlanCompleted(p));
+
+  incomplete.sort((a, b) => a.target_completion_date.localeCompare(b.target_completion_date));
+  completed.sort((a, b) => {
+    const dateA = latestCompletionDate(a) ?? a.target_completion_date;
+    const dateB = latestCompletionDate(b) ?? b.target_completion_date;
+    return dateA.localeCompare(dateB);
+  });
+
+  return [...incomplete, ...completed];
+}
+
+const defaultProgressForm = (targetDate = "") => ({
   achievement_level: ACHIEVEMENT_LEVELS[0],
-  completion_date: "",
+  target_completion_date: targetDate,
 });
 
 export default function StudyPlansPage() {
@@ -20,10 +45,12 @@ export default function StudyPlansPage() {
   const [form, setForm] = useState({ subject: SUBJECTS[0], unit: "", target_completion_date: "" });
   const [progressPlanId, setProgressPlanId] = useState<number | null>(null);
   const [panelOpen, setPanelOpen] = useState(false);
-  const [progressForm, setProgressForm] = useState(defaultProgressForm);
+  const [progressForm, setProgressForm] = useState(defaultProgressForm());
   const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const scrolledRef = useRef(false);
+  const openedProgressRef = useRef(false);
   const isReadOnly = user?.is_read_only ?? false;
+  const sortedPlans = useMemo(() => sortPlans(plans), [plans]);
 
   async function reload() {
     setPlans(await academicApi.studyPlans());
@@ -36,9 +63,9 @@ export default function StudyPlansPage() {
     }
   }, []);
 
-  const animateOpen = useCallback((planId: number) => {
+  const animateOpen = useCallback((planId: number, targetDate: string) => {
     clearCloseTimer();
-    setProgressForm(defaultProgressForm());
+    setProgressForm(defaultProgressForm(targetDate));
     setProgressPlanId(planId);
     setPanelOpen(false);
     requestAnimationFrame(() => {
@@ -55,7 +82,7 @@ export default function StudyPlansPage() {
     }, SLIDE_MS);
   }, [clearCloseTimer]);
 
-  const openProgress = useCallback((planId: number) => {
+  const openProgress = useCallback((planId: number, targetDate: string) => {
     if (progressPlanId === planId && panelOpen) {
       closeProgress();
       return;
@@ -63,10 +90,10 @@ export default function StudyPlansPage() {
     if (progressPlanId !== null) {
       clearCloseTimer();
       setPanelOpen(false);
-      closeTimerRef.current = setTimeout(() => animateOpen(planId), SLIDE_MS);
+      closeTimerRef.current = setTimeout(() => animateOpen(planId, targetDate), SLIDE_MS);
       return;
     }
-    animateOpen(planId);
+    animateOpen(planId, targetDate);
   }, [progressPlanId, panelOpen, closeProgress, clearCloseTimer, animateOpen]);
 
   useEffect(() => {
@@ -92,7 +119,12 @@ export default function StudyPlansPage() {
       el.classList.add("study-plan-focus");
       window.setTimeout(() => el.classList.remove("study-plan-focus"), 2500);
     });
-  }, [plans]);
+
+    if (!openedProgressRef.current && params.get("openProgress") === "1" && !isPlanCompleted(match)) {
+      openedProgressRef.current = true;
+      openProgress(match.plan_id, match.target_completion_date);
+    }
+  }, [plans, openProgress]);
 
   useEffect(() => {
     return () => clearCloseTimer();
@@ -150,8 +182,10 @@ export default function StudyPlansPage() {
 
         <section className="card">
           <h2 className="section-title mb-3">計画一覧</h2>
-          {plans.length === 0 && <EmptyState />}
-          {plans.map((p) => {
+          {sortedPlans.length === 0 && <EmptyState />}
+          {sortedPlans.map((p) => {
+            const completed = isPlanCompleted(p);
+            const completionDate = latestCompletionDate(p);
             const isMounted = progressPlanId === p.plan_id;
             return (
               <div
@@ -159,24 +193,32 @@ export default function StudyPlansPage() {
                 id={`study-plan-${p.plan_id}`}
                 className="mb-3 scroll-mt-24 rounded-xl bg-[var(--surface)] p-3"
               >
-                <p className="font-bold text-black">{displayValue(p.subject)} — {displayValue(p.unit)}</p>
+                <div className="flex items-start justify-between gap-2">
+                  <p className="font-bold text-black">{displayValue(p.subject)} — {displayValue(p.unit)}</p>
+                  {completed && (
+                    <span className="badge-complete shrink-0">完了</span>
+                  )}
+                </div>
                 <p className="text-sm text-black">目標: {formatDateJa(p.target_completion_date)}</p>
-                {p.progress.length === 0 ? (
+                {completed && completionDate ? (
+                  <p className="text-sm text-black">完了日: {formatDateJa(completionDate)}</p>
+                ) : p.progress.length === 0 ? (
                   <p className="text-sm text-black">進捗: 情報なし</p>
                 ) : (
                   p.progress.map((pr) => (
                     <p key={pr.progress_id} className="text-sm text-black">
-                      {displayValue(pr.achievement_level)} / {pr.completion_date ? formatDateJa(pr.completion_date) : "情報なし"}
+                      {displayValue(pr.achievement_level)}
+                      {pr.completion_date ? ` / 完了日: ${formatDateJa(pr.completion_date)}` : ""}
                     </p>
                   ))
                 )}
-                {!isReadOnly && (
+                {!isReadOnly && !completed && (
                   <>
                     <button
                       type="button"
                       data-progress-trigger={p.plan_id}
                       className="btn-secondary mt-2 w-full text-sm"
-                      onClick={() => openProgress(p.plan_id)}
+                      onClick={() => openProgress(p.plan_id, p.target_completion_date)}
                     >
                       進捗を記録
                     </button>
@@ -193,7 +235,7 @@ export default function StudyPlansPage() {
                               await academicApi.createProgress({
                                 plan_id: p.plan_id,
                                 achievement_level: progressForm.achievement_level,
-                                completion_date: progressForm.completion_date || undefined,
+                                target_completion_date: progressForm.target_completion_date || undefined,
                               });
                               closeProgress();
                               reload();
@@ -208,12 +250,20 @@ export default function StudyPlansPage() {
                                 <option key={l}>{l}</option>
                               ))}
                             </Select>
-                            <Label>完了日（任意）</Label>
+                            <Label>目標完了日の変更</Label>
                             <Input
                               type="date"
-                              value={progressForm.completion_date}
-                              onChange={(e) => setProgressForm({ ...progressForm, completion_date: e.target.value })}
+                              value={progressForm.target_completion_date}
+                              onChange={(e) =>
+                                setProgressForm({ ...progressForm, target_completion_date: e.target.value })
+                              }
+                              required
                             />
+                            {progressForm.achievement_level === "完了" && (
+                              <p className="text-xs font-medium text-black">
+                                「完了」を保存すると、今日の日付が完了日として自動記録されます。
+                              </p>
+                            )}
                             <div className="flex gap-2">
                               <button type="submit" className="btn-primary flex-1">保存</button>
                               <button type="button" className="btn-secondary flex-1" onClick={closeProgress}>

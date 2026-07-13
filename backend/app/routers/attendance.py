@@ -3,15 +3,18 @@ from datetime import date, datetime, timedelta
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.database import get_db
 from app.deps import get_current_user, require_admin, require_writable
+from app.models.academic import StudyPlan
 from app.models.attendance import Attendance, DailyStudyRecord, Seat
 from app.models.student import Student
 from app.schemas import (
     ActiveSeatStatus,
     AttendanceResponse,
     AttendanceUpdateRequest,
+    CalendarTargetPlan,
     CalendarWeek,
     CheckInRequest,
     StudyRecordCreate,
@@ -234,6 +237,21 @@ async def study_calendar(
     study_result = await db.execute(
         select(DailyStudyRecord).where(DailyStudyRecord.student_id == student_id)
     )
+    plans_result = await db.execute(
+        select(StudyPlan)
+        .where(StudyPlan.student_id == student_id)
+        .options(selectinload(StudyPlan.progress_entries))
+    )
+    plans = plans_result.scalars().unique().all()
+
+    target_by_date: dict[date, list[CalendarTargetPlan]] = {}
+    for plan in plans:
+        completed = any(pt.completion_date is not None for pt in plan.progress_entries)
+        if completed:
+            continue
+        target_by_date.setdefault(plan.target_completion_date, []).append(
+            CalendarTargetPlan(plan_id=plan.plan_id, subject=plan.subject, unit=plan.unit)
+        )
 
     day_att: dict[date, list] = {}
     day_study: dict[date, list] = {}
@@ -283,7 +301,15 @@ async def study_calendar(
                     t = _format_time(s.recorded_at)
                     lines.append(f"家 {t} ({s.subject} {s.topic_unit})")
 
-            days.append(CalendarDay(date=d, color=color, summary_lines=lines))
+            days.append(
+                CalendarDay(
+                    date=d,
+                    color=color,
+                    summary_lines=lines,
+                    target_plans=target_by_date.get(d, []),
+                    is_today=d == today,
+                )
+            )
 
         calendar_weeks.append(CalendarWeek(week_start=week_start, days=days))
 
