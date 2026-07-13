@@ -14,7 +14,7 @@ import {
   type StudentFullProfile,
 } from "@/lib/api";
 import { useAuth } from "@/lib/useAuth";
-import { formatTimeJa } from "@/lib/utils";
+import { formatTimeJa, toDatetimeLocalJst, datetimeLocalJstToIso } from "@/lib/utils";
 
 export default function AdminStudentDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -177,18 +177,18 @@ export default function AdminStudentDetailPage() {
                   e.preventDefault();
                   const fd = new FormData(e.currentTarget);
                   await attendanceApi.updateAttendance(a.attendance_id, {
-                    check_in_time: fd.get("check_in") || undefined,
-                    check_out_time: fd.get("check_out") || undefined,
+                    check_in_time: datetimeLocalJstToIso(String(fd.get("check_in") || "")) || undefined,
+                    check_out_time: datetimeLocalJstToIso(String(fd.get("check_out") || "")) || undefined,
                   });
                   setSaved("出席を更新しました");
                   reload();
                 }}
               >
-                <Input type="datetime-local" name="check_in" defaultValue={a.check_in_time.slice(0, 16)} />
+                <Input type="datetime-local" name="check_in" defaultValue={toDatetimeLocalJst(a.check_in_time)} />
                 <Input
                   type="datetime-local"
                   name="check_out"
-                  defaultValue={a.check_out_time?.slice(0, 16) ?? ""}
+                  defaultValue={a.check_out_time ? toDatetimeLocalJst(a.check_out_time) : ""}
                 />
                 <button type="submit" className="btn-secondary text-sm">
                   時間を修正

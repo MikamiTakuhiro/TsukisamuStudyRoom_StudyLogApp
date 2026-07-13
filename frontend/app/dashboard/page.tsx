@@ -73,7 +73,9 @@ export default function DashboardPage() {
 
         <section
           className={`card shrink-0 py-3 ${
-            openMenuId ? "overflow-visible" : "max-h-[min(28vh,12rem)] overflow-y-auto"
+            openMenuId
+              ? "relative z-30 overflow-visible"
+              : "max-h-[min(28vh,12rem)] overflow-y-auto"
           }`}
         >
           <h2 className="section-title mb-2">通知・リマインド</h2>
@@ -139,8 +141,8 @@ export default function DashboardPage() {
       )}
 
       {selectedDay && (
-        <div className="fixed inset-0 z-50 flex items-end bg-black/40 sm:items-center sm:justify-center">
-          <div className="w-full rounded-t-3xl bg-white p-6 sm:rounded-3xl">
+        <div className="modal-overlay items-end sm:items-center sm:justify-center">
+          <div className="modal-panel w-full rounded-t-3xl bg-white p-6 sm:rounded-3xl">
             <h3 className="text-lg font-bold text-black">{formatDateJa(selectedDay.date)}</h3>
             {selectedDay.lines.length === 0 ? (
               <p className="mt-3 text-black">情報なし</p>
@@ -161,8 +163,8 @@ export default function DashboardPage() {
       )}
 
       {showStudyModal && (
-        <div className="fixed inset-0 z-50 flex items-end bg-black/40 sm:items-center sm:justify-center">
-          <div className="w-full rounded-t-3xl bg-white p-6 sm:rounded-3xl">
+        <div className="modal-overlay items-end sm:items-center sm:justify-center">
+          <div className="modal-panel w-full rounded-t-3xl bg-white p-6 sm:rounded-3xl">
             <h3 className="mb-4 text-lg font-bold text-black">今から勉強する内容</h3>
             {!selectedSubject ? (
               <div className="grid grid-cols-2 gap-3">
@@ -210,8 +212,8 @@ export default function DashboardPage() {
       )}
 
       {detailNotification && (
-        <div className="fixed inset-0 z-50 flex items-end bg-black/40 sm:items-center sm:justify-center">
-          <div className="w-full rounded-t-3xl bg-white p-6 sm:max-w-md sm:rounded-3xl">
+        <div className="modal-overlay items-end sm:items-center sm:justify-center">
+          <div className="modal-panel w-full rounded-t-3xl bg-white p-6 sm:max-w-md sm:rounded-3xl">
             <h3 className="text-lg font-bold text-black">通知の詳細</h3>
             <dl className="mt-4 space-y-3 text-sm text-black">
               <div>

@@ -46,6 +46,8 @@ export default function NotificationRow({
   return (
     <div
       className={`relative mb-2 flex items-start gap-2 rounded-xl border-2 p-2.5 last:mb-0 ${
+        menuOpen ? "z-10" : ""
+      } ${
         notification.trigger_gap_detected
           ? "border-[var(--navy)] bg-[var(--moon-yellow)]"
           : "border-[var(--border)] bg-[var(--surface)]"

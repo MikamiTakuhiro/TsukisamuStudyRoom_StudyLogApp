@@ -67,7 +67,7 @@ export default function LoginPage() {
 
           <fieldset className="space-y-2">
             <legend className="mb-2 text-sm font-bold text-black">ログイン種別</legend>
-            <label className="flex cursor-pointer items-center gap-3 rounded-2xl border-2 border-[var(--border)] p-4">
+            <label className="selectable-card flex cursor-pointer items-center gap-3 rounded-2xl border-2 border-[var(--border)] p-4">
               <input
                 type="radio"
                 name="sessionType"
@@ -79,7 +79,7 @@ export default function LoginPage() {
                 <span className="text-sm text-black">次回からID入力不要</span>
               </span>
             </label>
-            <label className="flex cursor-pointer items-center gap-3 rounded-2xl border-2 border-[var(--border)] p-4">
+            <label className="selectable-card flex cursor-pointer items-center gap-3 rounded-2xl border-2 border-[var(--border)] p-4">
               <input
                 type="radio"
                 name="sessionType"

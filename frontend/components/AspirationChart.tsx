@@ -14,7 +14,7 @@ const PAD = { top: 20, right: 20, bottom: 52, left: 56 };
 
 function formatAxisDate(iso: string): string {
   const d = new Date(iso);
-  return d.toLocaleDateString("ja-JP", { month: "numeric", day: "numeric" });
+  return d.toLocaleDateString("ja-JP", { month: "numeric", day: "numeric", timeZone: "Asia/Tokyo" });
 }
 
 export default function AspirationChart({ items }: Props) {

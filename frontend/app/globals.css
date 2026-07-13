@@ -77,7 +77,10 @@ p, span, label, h1, h2, h3, h4, li, td, th, legend {
   color: #000000;
   background: #ffffff;
   outline: none;
-  transition: border-color 0.15s;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.15s ease;
 }
 
 .app-input::placeholder,
@@ -89,6 +92,7 @@ p, span, label, h1, h2, h3, h4, li, td, th, legend {
 .app-select:focus,
 .app-textarea:focus {
   border-color: var(--navy);
+  box-shadow: 0 0 0 3px rgba(26, 39, 68, 0.12);
 }
 
 .app-select option {
@@ -96,7 +100,8 @@ p, span, label, h1, h2, h3, h4, li, td, th, legend {
 }
 
 /* ボタン共通 */
-.btn-primary {
+.btn-primary,
+a.btn-primary {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -108,18 +113,39 @@ p, span, label, h1, h2, h3, h4, li, td, th, legend {
   padding: 1rem 1.5rem;
   font-size: 1.0625rem;
   min-height: 3.25rem;
-  transition: background 0.15s, transform 0.1s;
+  border: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  transition:
+    background 0.2s ease,
+    transform 0.15s cubic-bezier(0.34, 1.4, 0.64, 1),
+    box-shadow 0.2s ease;
 }
 
 .btn-primary:hover:not(:disabled) {
   background: var(--navy-light);
 }
 
-.btn-primary:active:not(:disabled) {
-  transform: scale(0.98);
+@media (hover: hover) {
+  .btn-primary:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(26, 39, 68, 0.22);
+  }
 }
 
-.btn-accent {
+.btn-primary:active:not(:disabled) {
+  transform: translateY(0) scale(0.96);
+  box-shadow: none;
+}
+
+.btn-primary:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.btn-accent,
+a.btn-accent {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -132,14 +158,43 @@ p, span, label, h1, h2, h3, h4, li, td, th, legend {
   font-size: 1.0625rem;
   min-height: 3.25rem;
   border: 2px solid var(--navy);
-  transition: background 0.15s, transform 0.1s;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  transition:
+    background 0.2s ease,
+    transform 0.15s cubic-bezier(0.34, 1.4, 0.64, 1),
+    box-shadow 0.2s ease;
 }
 
 .btn-accent:hover:not(:disabled) {
   background: var(--moon-yellow-dark);
 }
 
-.btn-secondary {
+@media (hover: hover) {
+  .btn-accent:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(26, 39, 68, 0.15);
+  }
+}
+
+.btn-accent:active:not(:disabled) {
+  transform: translateY(0) scale(0.96);
+  box-shadow: none;
+}
+
+.btn-warn {
+  background: #fb923c;
+}
+
+@media (hover: hover) {
+  .btn-warn:hover:not(:disabled) {
+    background: #f97316;
+  }
+}
+
+.btn-secondary,
+a.btn-secondary {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -152,14 +207,83 @@ p, span, label, h1, h2, h3, h4, li, td, th, legend {
   font-size: 1rem;
   min-height: 3rem;
   border: 2px solid var(--border);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease,
+    transform 0.15s cubic-bezier(0.34, 1.4, 0.64, 1),
+    box-shadow 0.2s ease;
+}
+
+@media (hover: hover) {
+  .btn-secondary:hover:not(:disabled) {
+    background: var(--surface);
+    border-color: var(--navy);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(26, 39, 68, 0.1);
+  }
+}
+
+.btn-secondary:active:not(:disabled) {
+  transform: translateY(0) scale(0.96);
+  box-shadow: none;
 }
 
 .btn-danger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
   border-radius: 9999px;
   background: #dc2626;
   color: #ffffff;
   font-weight: 600;
   padding: 0.75rem 1.25rem;
+  border: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  transition:
+    background 0.2s ease,
+    transform 0.15s cubic-bezier(0.34, 1.4, 0.64, 1),
+    box-shadow 0.2s ease;
+}
+
+@media (hover: hover) {
+  .btn-danger:hover:not(:disabled) {
+    background: #b91c1c;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(220, 38, 38, 0.25);
+  }
+}
+
+.btn-danger:active:not(:disabled) {
+  transform: translateY(0) scale(0.96);
+  box-shadow: none;
+}
+
+.btn-icon {
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  transition:
+    transform 0.15s cubic-bezier(0.34, 1.4, 0.64, 1),
+    background 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+@media (hover: hover) {
+  .btn-icon:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px rgba(26, 39, 68, 0.15);
+  }
+}
+
+.btn-icon:active {
+  transform: scale(0.92);
+  box-shadow: none;
 }
 
 .card {
@@ -167,6 +291,7 @@ p, span, label, h1, h2, h3, h4, li, td, th, legend {
   border: 2px solid var(--border);
   border-radius: 1.25rem;
   padding: 1.25rem;
+  animation: app-card-enter 0.4s ease-out both;
 }
 
 .dashboard-home .card {
@@ -208,10 +333,26 @@ p, span, label, h1, h2, h3, h4, li, td, th, legend {
   align-items: center;
   justify-content: center;
   z-index: 40;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  transition:
+    transform 0.2s cubic-bezier(0.34, 1.4, 0.64, 1),
+    box-shadow 0.2s ease,
+    background 0.2s ease;
+}
+
+@media (hover: hover) {
+  .fab:hover {
+    transform: scale(1.06) translateY(-2px);
+    box-shadow: 0 8px 24px rgba(26, 39, 68, 0.3);
+    background: var(--moon-yellow-dark);
+  }
 }
 
 .fab:active {
-  transform: scale(0.95);
+  transform: scale(0.94);
+  box-shadow: 0 2px 8px rgba(26, 39, 68, 0.2);
 }
 
 .calendar-stripe {
@@ -277,24 +418,33 @@ p, span, label, h1, h2, h3, h4, li, td, th, legend {
   letter-spacing: 0.05em;
   line-height: 1;
   cursor: pointer;
-  transition: background 0.15s;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    background 0.15s ease,
+    transform 0.15s cubic-bezier(0.34, 1.4, 0.64, 1);
 }
 
 .notification-menu-trigger:hover {
   background: rgba(0, 0, 0, 0.06);
 }
 
+.notification-menu-trigger:active {
+  transform: scale(0.9);
+}
+
 .notification-menu {
   position: absolute;
   right: 0;
   top: calc(100% + 0.25rem);
-  z-index: 20;
+  z-index: 50;
   min-width: 9.5rem;
   overflow: hidden;
   border-radius: 0.75rem;
   border: 2px solid var(--border);
   background: #ffffff;
   box-shadow: 0 4px 16px rgba(26, 39, 68, 0.15);
+  transform-origin: top right;
+  animation: app-scale-in 0.2s cubic-bezier(0.34, 1.2, 0.64, 1) both;
 }
 
 .notification-menu-item {
@@ -308,11 +458,19 @@ p, span, label, h1, h2, h3, h4, li, td, th, legend {
   font-weight: 600;
   text-align: left;
   cursor: pointer;
-  transition: background 0.15s;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    background 0.15s ease,
+    transform 0.12s ease;
 }
 
 .notification-menu-item:hover {
   background: var(--surface);
+}
+
+.notification-menu-item:active {
+  transform: scale(0.98);
+  background: var(--moon-yellow);
 }
 
 .notification-menu-item + .notification-menu-item {
@@ -332,4 +490,152 @@ p, span, label, h1, h2, h3, h4, li, td, th, legend {
   fill: #000000;
   font-size: 11px;
   font-weight: 600;
+}
+
+/* カレンダー・選択カード・モーダル */
+.calendar-day-cell {
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    transform 0.15s cubic-bezier(0.34, 1.4, 0.64, 1),
+    box-shadow 0.15s ease,
+    opacity 0.15s ease;
+}
+
+.calendar-day-cell:active {
+  transform: scale(0.92);
+  opacity: 0.85;
+}
+
+.selectable-card {
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    border-color 0.2s ease,
+    background 0.2s ease,
+    transform 0.15s cubic-bezier(0.34, 1.4, 0.64, 1),
+    box-shadow 0.2s ease;
+}
+
+.selectable-card:has(input:checked) {
+  border-color: var(--navy);
+  background: rgba(255, 213, 79, 0.15);
+  box-shadow: 0 0 0 2px rgba(26, 39, 68, 0.1);
+}
+
+.selectable-card:active {
+  transform: scale(0.98);
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  background: rgba(0, 0, 0, 0.4);
+  animation: app-fade-in 0.25s ease-out both;
+}
+
+.modal-panel {
+  animation: app-slide-up 0.35s cubic-bezier(0.34, 1.2, 0.64, 1) both;
+}
+
+.menu-drawer-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+}
+
+.menu-drawer-backdrop {
+  flex: 1;
+  border: none;
+  background: rgba(0, 0, 0, 0.4);
+  cursor: pointer;
+  animation: app-fade-in 0.25s ease-out both;
+}
+
+.menu-drawer-panel {
+  animation: app-slide-in-right 0.3s cubic-bezier(0.34, 1.2, 0.64, 1) both;
+}
+
+.menu-nav-link {
+  display: block;
+  border-radius: 0.75rem;
+  padding: 0.75rem 1rem;
+  font-weight: 700;
+  color: #000000;
+  transition:
+    background 0.2s ease,
+    transform 0.15s cubic-bezier(0.34, 1.4, 0.64, 1);
+}
+
+.menu-nav-link:hover {
+  background: rgba(255, 213, 79, 0.4);
+}
+
+.menu-nav-link:active {
+  transform: scale(0.97);
+  background: rgba(255, 213, 79, 0.6);
+}
+
+@keyframes app-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes app-slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(1.5rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes app-slide-in-right {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes app-scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes app-card-enter {
+  from {
+    opacity: 0;
+    transform: translateY(0.625rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

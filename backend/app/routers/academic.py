@@ -31,6 +31,7 @@ from app.schemas import (
     StudyPlanUpdate,
 )
 from app.services.auth_service import resolve_effective_student_id
+from app.timezone_utils import today_app
 
 router = APIRouter(prefix="/academic", tags=["academic"])
 
@@ -108,7 +109,7 @@ async def create_aspirations_bulk(
             student_id=sid,
             target_school=school,
             priority_rank=idx,
-            date_recorded=date.today(),
+            date_recorded=today_app(),
         )
         db.add(row)
         created.append(row)
@@ -130,7 +131,7 @@ async def create_aspiration(
         student_id=sid,
         target_school=body.target_school,
         priority_rank=body.priority_rank,
-        date_recorded=body.date_recorded or date.today(),
+        date_recorded=body.date_recorded or today_app(),
     )
     db.add(row)
     await db.commit()

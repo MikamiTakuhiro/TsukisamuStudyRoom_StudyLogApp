@@ -32,7 +32,7 @@ export default function AppHeader({
             <button
               type="button"
               onClick={onMenuClick}
-              className="flex h-11 w-11 items-center justify-center rounded-full border-2 border-[var(--navy)] bg-[var(--moon-yellow)] text-xl font-bold text-black"
+              className="btn-icon flex h-11 w-11 items-center justify-center rounded-full border-2 border-[var(--navy)] bg-[var(--moon-yellow)] text-xl font-bold text-black"
               aria-label="メニュー"
             >
               ☰

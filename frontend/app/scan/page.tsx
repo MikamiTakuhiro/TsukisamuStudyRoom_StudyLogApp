@@ -148,9 +148,7 @@ export default function ScanPage() {
                   type="button"
                   onClick={confirmAction}
                   disabled={processing}
-                  className={`flex-1 rounded-full py-4 font-bold text-black disabled:opacity-60 ${
-                    scanResult.mode === "check_in" ? "btn-accent" : "bg-orange-400 border-2 border-[var(--navy)]"
-                  }`}
+                  className={`flex-1 ${scanResult.mode === "check_in" ? "btn-accent" : "btn-accent btn-warn"}`}
                 >
                   {processing ? "処理中..." : scanResult.mode === "check_in" ? "入室する" : "退室する"}
                 </button>

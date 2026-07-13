@@ -1,4 +1,4 @@
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
@@ -20,6 +20,7 @@ from app.schemas import (
     CalendarDay,
 )
 from app.services.auth_service import resolve_effective_student_id
+from app.timezone_utils import app_date, ensure_aware_as_app, format_time_app, now_app, today_app
 
 router = APIRouter(prefix="/attendance", tags=["attendance"])
 
@@ -102,7 +103,7 @@ async def check_in(
     if active_result.scalar_one_or_none():
         raise HTTPException(status_code=400, detail="すでに入室中です")
 
-    att = Attendance(student_id=student_id, seat_id=seat.seat_id)
+    att = Attendance(student_id=student_id, seat_id=seat.seat_id, check_in_time=now_app())
     db.add(att)
     await db.commit()
     await db.refresh(att)
@@ -125,7 +126,7 @@ async def check_out(
     if not row:
         raise HTTPException(status_code=400, detail="入室記録がありません")
     att, seat_name = row
-    att.check_out_time = datetime.now(timezone.utc)
+    att.check_out_time = now_app()
     await db.commit()
     await db.refresh(att)
     return _attendance_response(att, seat_name)
@@ -151,13 +152,13 @@ async def timeline(
 
     days: dict = {}
     for att, seat_name in att_result.all():
-        d = att.check_in_time.date()
+        d = app_date(att.check_in_time)
         if d not in days:
             days[d] = {"attendances": [], "study_records": []}
         days[d]["attendances"].append(_attendance_response(att, seat_name))
 
     for rec in study_result.scalars():
-        d = rec.recorded_at.date()
+        d = app_date(rec.recorded_at)
         if d not in days:
             days[d] = {"attendances": [], "study_records": []}
         days[d]["study_records"].append(
@@ -196,6 +197,7 @@ async def create_study_record(
         subject=body.subject,
         topic_unit=body.topic_unit,
         study_location=location,
+        recorded_at=now_app(),
     )
     db.add(rec)
     await db.commit()
@@ -214,7 +216,7 @@ def _week_start_sunday(d: date) -> date:
 
 
 def _format_time(dt: datetime) -> str:
-    return dt.astimezone(timezone.utc).strftime("%H:%M")
+    return format_time_app(dt)
 
 
 @router.get("/calendar", response_model=list[CalendarWeek])
@@ -236,13 +238,13 @@ async def study_calendar(
     day_att: dict[date, list] = {}
     day_study: dict[date, list] = {}
     for att, seat_name in att_result.all():
-        d = att.check_in_time.date()
+        d = app_date(att.check_in_time)
         day_att.setdefault(d, []).append((att, seat_name))
     for rec in study_result.scalars():
-        d = rec.recorded_at.date()
+        d = app_date(rec.recorded_at)
         day_study.setdefault(d, []).append(rec)
 
-    today = date.today()
+    today = today_app()
     current_week_start = _week_start_sunday(today)
     calendar_weeks: list[CalendarWeek] = []
 
@@ -332,9 +334,9 @@ async def update_attendance(
         raise HTTPException(status_code=404, detail="出席記録が見つかりません")
     att, seat_name = row
     if body.check_in_time is not None:
-        att.check_in_time = body.check_in_time
+        att.check_in_time = ensure_aware_as_app(body.check_in_time)
     if body.check_out_time is not None:
-        att.check_out_time = body.check_out_time
+        att.check_out_time = ensure_aware_as_app(body.check_out_time)
     if body.is_forgotten_checkout is not None:
         att.is_forgotten_checkout = body.is_forgotten_checkout
     await db.commit()

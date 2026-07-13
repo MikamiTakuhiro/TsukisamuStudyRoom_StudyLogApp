@@ -104,7 +104,7 @@ export default function StudyCalendar({
 
   return (
     <div
-      className={`calendar-shell card flex min-h-0 flex-col ${fillHeight ? "mb-0 h-full flex-1" : "mb-6"}`}
+      className={`calendar-shell card relative z-0 flex min-h-0 flex-col ${fillHeight ? "mb-0 h-full flex-1" : "mb-6"}`}
     >
       <h2 className="section-title mb-2 shrink-0 px-1">学習履歴カレンダー</h2>
 
@@ -154,7 +154,7 @@ export default function StudyCalendar({
                     key={day.date}
                     type="button"
                     onClick={() => onDayClick(week, idx)}
-                    className={`calendar-day-cell relative w-full rounded-md border ${cellClass(day.color)} touch-manipulation active:opacity-90 ${
+                    className={`calendar-day-cell relative w-full rounded-md border ${cellClass(day.color)} ${
                       fillHeight ? "min-h-[40px]" : "min-h-[56px]"
                     }`}
                     aria-label={formatDateJa(day.date)}

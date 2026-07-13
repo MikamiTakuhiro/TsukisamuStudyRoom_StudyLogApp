@@ -38,9 +38,9 @@ export default function MenuDrawer({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex">
-      <button type="button" className="flex-1 bg-black/40" onClick={onClose} aria-label="閉じる" />
-      <aside className="flex w-72 max-w-[85vw] flex-col bg-white shadow-xl">
+    <div className="menu-drawer-overlay">
+      <button type="button" className="menu-drawer-backdrop" onClick={onClose} aria-label="閉じる" />
+      <aside className="menu-drawer-panel flex w-72 max-w-[85vw] flex-col bg-white shadow-xl">
         <div className="surface-navy border-b-2 border-[var(--navy-light)] bg-[var(--navy)] px-4 py-5">
           <p className="text-lg font-bold">月寒学習室</p>
           <p className="surface-navy-muted text-sm font-medium">メニュー</p>
@@ -54,7 +54,7 @@ export default function MenuDrawer({
               key={link.href}
               href={link.href}
               onClick={onClose}
-              className="block rounded-xl px-4 py-3 font-bold text-black hover:bg-[var(--moon-yellow)]/40"
+              className="menu-nav-link"
             >
               {link.label}
             </Link>

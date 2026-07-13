@@ -1,3 +1,5 @@
+const APP_TIMEZONE = "Asia/Tokyo";
+
 export function displayValue(value: string | number | null | undefined): string {
   if (value === null || value === undefined || value === "") return "情報なし";
   return String(value);
@@ -10,11 +12,16 @@ export function formatDateJa(iso: string | Date): string {
     month: "long",
     day: "numeric",
     weekday: "short",
+    timeZone: APP_TIMEZONE,
   });
 }
 
 export function formatTimeJa(iso: string): string {
-  return new Date(iso).toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" });
+  return new Date(iso).toLocaleTimeString("ja-JP", {
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: APP_TIMEZONE,
+  });
 }
 
 export function formatDateTimeJa(iso: string | Date): string {
@@ -26,7 +33,27 @@ export function formatDateTimeJa(iso: string | Date): string {
     weekday: "short",
     hour: "2-digit",
     minute: "2-digit",
+    timeZone: APP_TIMEZONE,
   });
+}
+
+/** datetime-local 入力用の日本時間文字列 (YYYY-MM-DDTHH:mm) */
+export function toDatetimeLocalJst(iso: string): string {
+  const formatted = new Intl.DateTimeFormat("sv-SE", {
+    timeZone: APP_TIMEZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(iso));
+  return formatted.replace(" ", "T");
+}
+
+/** datetime-local の値を日本時間として ISO 文字列に変換 */
+export function datetimeLocalJstToIso(value: string): string {
+  if (!value) return "";
+  return `${value}:00+09:00`;
 }
 
 export function downloadTextFile(filename: string, content: string) {
