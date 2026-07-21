@@ -48,11 +48,18 @@ export default function NotificationRow({
       className={`relative mb-2 flex items-start gap-2 rounded-xl border-2 p-2.5 last:mb-0 ${
         menuOpen ? "z-10" : ""
       } ${
-        notification.trigger_gap_detected
-          ? "border-[var(--navy)] bg-[var(--moon-yellow)]"
-          : "border-[var(--border)] bg-[var(--surface)]"
+        notification.notification_type === "broadcast"
+          ? "border-orange-400 bg-orange-50"
+          : notification.trigger_gap_detected
+            ? "border-[var(--navy)] bg-[var(--moon-yellow)]"
+            : "border-[var(--border)] bg-[var(--surface)]"
       }`}
     >
+      {notification.notification_type === "broadcast" && (
+        <span className="shrink-0 rounded-md bg-orange-500 px-1.5 py-0.5 text-[10px] font-bold text-white">
+          お知らせ
+        </span>
+      )}
       <p className="min-w-0 flex-1 text-sm font-medium text-black">{notification.content}</p>
       <div className="relative shrink-0" ref={menuRef}>
         <button
@@ -84,6 +91,16 @@ export default function NotificationRow({
                 削除
               </button>
             )}
+            {isReadOnly && notification.notification_type === "broadcast" && (
+              <button
+                type="button"
+                role="menuitem"
+                className="notification-menu-item notification-menu-item-danger"
+                onClick={onDelete}
+              >
+                削除
+              </button>
+            )}
           </div>
         )}
       </div>
@@ -93,6 +110,7 @@ export default function NotificationRow({
 
 export function notificationTypeLabel(type: string): string {
   if (type === "plan_gap") return "学習計画リマインド";
+  if (type === "broadcast") return "塾からのお知らせ";
   return type;
 }
 

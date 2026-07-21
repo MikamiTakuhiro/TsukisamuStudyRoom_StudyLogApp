@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
-import AppHeader from "@/components/AppHeader";
+import { useParams } from "next/navigation";
+import AdminShell from "@/components/AdminShell";
 import { Input, Label, Select, EmptyState } from "@/components/ui/Input";
 import {
   academicApi,
@@ -13,14 +13,13 @@ import {
   ACHIEVEMENT_LEVELS,
   type StudentFullProfile,
 } from "@/lib/api";
-import { useAuth } from "@/lib/useAuth";
+import { useRequireAdmin } from "@/lib/useRequireAdmin";
 import { formatTimeJa, toDatetimeLocalJst, datetimeLocalJstToIso } from "@/lib/utils";
 
 export default function AdminStudentDetailPage() {
   const { id } = useParams<{ id: string }>();
-  const router = useRouter();
   const studentId = Number(id);
-  const { user, loading } = useAuth();
+  const { ready } = useRequireAdmin();
   const [profile, setProfile] = useState<StudentFullProfile | null>(null);
   const [saved, setSaved] = useState("");
 
@@ -29,8 +28,8 @@ export default function AdminStudentDetailPage() {
   }
 
   useEffect(() => {
-    if (user?.role === "admin") reload().catch(console.error);
-  }, [user, studentId]);
+    if (ready) reload().catch(console.error);
+  }, [ready, studentId]);
 
   const [studentForm, setStudentForm] = useState({ name: "", grade: 1, gender: "" });
   const [profileForm, setProfileForm] = useState({ phone: "", email: "", birth_date: "", school_name: "" });
@@ -56,20 +55,25 @@ export default function AdminStudentDetailPage() {
     return value;
   }
 
-  if (loading || !user) return <div className="p-8 font-bold text-black">読み込み中...</div>;
-  if (user.role !== "admin") {
-    router.replace("/dashboard");
-    return null;
+  if (!ready || !profile) {
+    return (
+      <AdminShell title="生徒詳細">
+        <div className="p-8 font-bold text-black">読み込み中...</div>
+      </AdminShell>
+    );
   }
-  if (!profile) return <div className="p-8 font-bold text-black">読み込み中...</div>;
 
   return (
-    <div className="min-h-full w-full max-w-full bg-[var(--surface)] pb-12">
-      <AppHeader title={`${profile.student.name} の詳細`} role="admin" />
-      <div className="app-shell w-full space-y-6 px-4 py-6">
-        <Link href="/admin" className="font-bold text-[var(--navy)] underline">
-          ← 管理画面に戻る
-        </Link>
+    <AdminShell title={`${profile.student.name} の詳細`}>
+      <div className="app-shell w-full space-y-6 px-4 py-6 pb-12">
+        <div className="flex flex-wrap gap-2">
+          <Link href="/admin" className="font-bold text-[var(--navy)] underline">
+            ← 運用・管理
+          </Link>
+          <Link href={`/admin/analytics/students/${studentId}`} className="btn-primary text-sm">
+            分析グラフ
+          </Link>
+        </div>
         {saved && <p className="rounded-xl bg-[var(--moon-yellow)] p-3 font-bold text-black">{saved}</p>}
 
         <section className="card">
@@ -418,6 +422,6 @@ export default function AdminStudentDetailPage() {
           ))}
         </section>
       </div>
-    </div>
+    </AdminShell>
   );
 }

@@ -23,10 +23,15 @@ export default function AppHeader({
           <h1 className="text-lg font-bold text-black">{title}</h1>
         </div>
         <div className="flex items-center gap-2">
-          {role === "admin" && (
-            <Link href="/admin" className="btn-secondary px-3 py-2 text-sm">
-              管理
-            </Link>
+          {role === "admin" && !showMenu && (
+            <>
+              <Link href="/admin/profile" className="btn-secondary px-3 py-2 text-sm">
+                プロフィール
+              </Link>
+              <Link href="/admin" className="btn-secondary px-3 py-2 text-sm">
+                管理
+              </Link>
+            </>
           )}
           {showMenu && (
             <button

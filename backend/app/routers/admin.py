@@ -14,6 +14,7 @@ from app.schemas import (
     AttendanceResponse,
     ExamResultFullResponse,
     ExamResultResponse,
+    BroadcastNotificationRequest,
     NotificationResponse,
     SeatCreateRequest,
     SeatResponse,
@@ -27,9 +28,7 @@ from app.schemas import (
     UserResponse,
 )
 from app.services.auth_service import (
-    detect_study_plan_gaps,
     is_read_only_user,
-    process_forgotten_checkouts,
     register_student_account,
     reset_student_passwords,
 )
@@ -171,6 +170,7 @@ async def get_student_full(
                 record_id=r.record_id,
                 subject=r.subject,
                 topic_unit=r.topic_unit,
+                study_location=getattr(r, "study_location", "school") or "school",
                 recorded_at=r.recorded_at,
             )
             for r in study.scalars()
@@ -334,22 +334,32 @@ async def list_notifications(
     return list(result.scalars())
 
 
-@router.post("/cron/forgotten-checkout")
-async def run_forgotten_checkout(
+@router.post("/notifications/broadcast")
+async def broadcast_notification(
+    body: BroadcastNotificationRequest,
     _: Student = Depends(require_admin),
     db: AsyncSession = Depends(get_db),
 ):
-    count = await process_forgotten_checkouts(db)
-    return {"processed": count}
+    content = body.content.strip()
+    if not content:
+        raise HTTPException(status_code=400, detail="内容を入力してください")
 
+    students_result = await db.execute(select(Student).where(Student.role == "student"))
+    students = students_result.scalars().all()
+    if not students:
+        return {"sent_count": 0}
 
-@router.post("/cron/detect-gaps")
-async def run_gap_detection(
-    _: Student = Depends(require_admin),
-    db: AsyncSession = Depends(get_db),
-):
-    count = await detect_study_plan_gaps(db)
-    return {"notifications_created": count}
+    for student in students:
+        db.add(
+            Notification(
+                student_id=student.student_id,
+                notification_type="broadcast",
+                content=content,
+                trigger_gap_detected=False,
+            )
+        )
+    await db.commit()
+    return {"sent_count": len(students)}
 
 
 @router.post("/seed/demo")

@@ -36,3 +36,14 @@ class DailyStudyRecord(Base):
     topic_unit: Mapped[str] = mapped_column(String(200))
     study_location: Mapped[str] = mapped_column(String(20), default="school")
     recorded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class SeatReservation(Base):
+    __tablename__ = "seat_reservations"
+
+    reservation_id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    student_id: Mapped[int] = mapped_column(Integer, ForeignKey("students.student_id"))
+    start_time: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    end_time: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())

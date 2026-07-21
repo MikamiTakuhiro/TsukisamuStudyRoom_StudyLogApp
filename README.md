@@ -142,7 +142,8 @@ npm run start
 3. **保護者アカウント**も同時作成（`{生徒ID}-p`、同じ初期パスワード）
 4. **座席・QR管理**: 座席名を登録 → QR コードを画面表示・ダウンロード
 5. **リアルタイム出席状況**: 現在どの席に誰がいるか確認
-6. **0:00退室処理 / 乖離通知**: 管理画面のボタンで手動実行（本番は cron 推奨）
+6. **0:00退室処理 / 乖離通知**: 日本時間 0:00 にバックエンドが自動実行（手動操作不要）
+7. **プロフィール編集**: 連絡先など自分の情報を `/admin/profile` から編集
 
 ### 生徒（user_id が `1` で始まる 6 桁）
 
@@ -228,23 +229,14 @@ ngrok http 3000
 
 ---
 
-## 7. 退室忘れの自動処理（0:00）
+## 7. 退室忘れ・乖離通知の自動処理（0:00 JST）
 
-PostgreSQL 関数 `process_forgotten_checkouts()` が、退室未記録の出席を 0:00 退室として処理します。
+バックエンド起動時にスケジューラが登録され、**毎日 日本時間 0:00** に以下を自動実行します。
 
-**本番運用**: Supabase の pg_cron または Render Cron で毎日 0:05 JST に以下を実行:
+1. `process_forgotten_checkouts()` — 退室未記録の出席を 0:00 退室として処理
+2. `detect_study_plan_gaps()` — 目標期限（JST）を過ぎた学習計画に乖離通知を送信
 
-```sql
-SELECT process_forgotten_checkouts();
-SELECT detect_study_plan_gaps();
-```
-
-開発中は管理画面のボタン、または:
-
-```bash
-curl -X POST http://localhost:8000/api/admin/cron/forgotten-checkout \
-  -H "Authorization: Bearer {管理者トークン}"
-```
+管理者が手動で実行する必要はありません。
 
 ---
 

@@ -148,6 +148,10 @@ class NotificationUpdateRequest(BaseModel):
     content: str | None = None
 
 
+class BroadcastNotificationRequest(BaseModel):
+    content: str = Field(min_length=1, max_length=2000)
+
+
 class ActiveSeatStatus(BaseModel):
     seat_id: int
     seat_name: str
@@ -295,3 +299,68 @@ class CalendarDay(BaseModel):
 class CalendarWeek(BaseModel):
     week_start: date
     days: list[CalendarDay]
+
+
+class AttendanceVisitItem(BaseModel):
+    attendance_id: int
+    date: date
+    seat_name: str | None
+    check_in_time: datetime
+    check_out_time: datetime | None
+    duration_minutes: int | None
+    is_forgotten_checkout: bool
+
+
+class MonthlyAttendanceStats(BaseModel):
+    year: int
+    month: int
+    visit_count: int
+    total_minutes: int
+    average_minutes: int
+
+
+class AttendanceSummaryResponse(BaseModel):
+    total_visits: int
+    total_minutes: int
+    average_minutes: int
+    this_month: MonthlyAttendanceStats
+    monthly_stats: list[MonthlyAttendanceStats]
+    recent_visits: list[AttendanceVisitItem]
+
+
+class ReservationCreateRequest(BaseModel):
+    reservation_date: date
+    start_time: str = Field(pattern=r"^\d{2}:\d{2}$")
+    end_time: str = Field(pattern=r"^\d{2}:\d{2}$")
+
+
+class ReservationUpdateRequest(BaseModel):
+    reservation_date: date | None = None
+    start_time: str | None = None
+    end_time: str | None = None
+
+
+class ReservationResponse(BaseModel):
+    reservation_id: int
+    student_id: int
+    student_name: str | None = None
+    start_time: datetime
+    end_time: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class AvailabilitySlot(BaseModel):
+    start_time: str
+    end_time: str
+    reserved_count: int
+    total_seats: int
+    available_seats: int
+    is_full: bool
+
+
+class DayAvailabilityResponse(BaseModel):
+    date: date
+    total_seats: int
+    slots: list[AvailabilitySlot]
+    reservations: list[ReservationResponse]

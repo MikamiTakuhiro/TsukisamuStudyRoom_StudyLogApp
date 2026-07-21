@@ -501,6 +501,32 @@ a.btn-secondary {
   font-weight: 600;
 }
 
+.analytics-chart-card {
+  background: var(--surface);
+  border-radius: 1rem;
+  padding: 1rem;
+}
+
+.analytics-chart-title {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--navy);
+  margin-bottom: 0.75rem;
+}
+
+.analytics-axis-label {
+  fill: #000000;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.analytics-kpi {
+  background: #ffffff;
+  border: 2px solid var(--border);
+  border-radius: 1rem;
+  padding: 1rem;
+}
+
 /* カレンダー・選択カード・モーダル */
 .calendar-day-cell {
   cursor: pointer;

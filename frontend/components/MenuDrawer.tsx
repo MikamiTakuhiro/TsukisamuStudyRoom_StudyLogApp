@@ -7,6 +7,9 @@ import { clearSession } from "@/lib/auth";
 
 const LINKS = [
   { href: "/dashboard", label: "ホーム" },
+  { href: "/attendance", label: "来塾記録" },
+  { href: "/reservations", label: "来塾予約" },
+  { href: "/live", label: "リアルタイム出席" },
   { href: "/aspirations", label: "志望校" },
   { href: "/study-plans", label: "学習計画" },
   { href: "/exams", label: "模試結果" },

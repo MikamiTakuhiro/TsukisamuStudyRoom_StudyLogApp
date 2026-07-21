@@ -21,6 +21,9 @@ from app.schemas import (
     StudyRecordResponse,
     TimelineDay,
     CalendarDay,
+    AttendanceSummaryResponse,
+    AttendanceVisitItem,
+    MonthlyAttendanceStats,
 )
 from app.services.auth_service import resolve_effective_student_id
 from app.timezone_utils import app_date, ensure_aware_as_app, format_time_app, now_app, today_app
@@ -218,6 +221,106 @@ def _week_start_sunday(d: date) -> date:
     return d - timedelta(days=(d.weekday() + 1) % 7)
 
 
+def _visit_duration_minutes(att: Attendance, *, end_at: datetime | None = None) -> int | None:
+    if att.check_out_time:
+        end = ensure_aware_as_app(att.check_out_time)
+    elif end_at:
+        end = end_at
+    else:
+        return None
+    start = ensure_aware_as_app(att.check_in_time)
+    return max(0, int((end - start).total_seconds() // 60))
+
+
+@router.get("/summary", response_model=AttendanceSummaryResponse)
+async def attendance_summary(
+    user: Student = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    student_id = resolve_effective_student_id(user)
+    result = await db.execute(
+        select(Attendance, Seat.seat_name)
+        .join(Seat, Seat.seat_id == Attendance.seat_id)
+        .where(Attendance.student_id == student_id)
+        .order_by(Attendance.check_in_time.desc())
+    )
+    rows = result.all()
+    now = now_app()
+    today = today_app()
+
+    monthly_map: dict[tuple[int, int], dict[str, int]] = {}
+    total_minutes = 0
+    completed_count = 0
+    recent_visits: list[AttendanceVisitItem] = []
+
+    for att, seat_name in rows:
+        d = app_date(att.check_in_time)
+        key = (d.year, d.month)
+        if key not in monthly_map:
+            monthly_map[key] = {"visit_count": 0, "total_minutes": 0, "completed_count": 0}
+        monthly_map[key]["visit_count"] += 1
+
+        duration = _visit_duration_minutes(att, end_at=now if att.check_out_time is None else None)
+        if duration is not None:
+            total_minutes += duration
+            completed_count += 1
+            monthly_map[key]["total_minutes"] += duration
+            monthly_map[key]["completed_count"] += 1
+
+        recent_visits.append(
+            AttendanceVisitItem(
+                attendance_id=att.attendance_id,
+                date=d,
+                seat_name=seat_name,
+                check_in_time=att.check_in_time,
+                check_out_time=att.check_out_time,
+                duration_minutes=duration,
+                is_forgotten_checkout=att.is_forgotten_checkout,
+            )
+        )
+
+    monthly_stats: list[MonthlyAttendanceStats] = []
+    for (year, month), stats in sorted(monthly_map.items(), reverse=True):
+        avg = (
+            round(stats["total_minutes"] / stats["completed_count"])
+            if stats["completed_count"] > 0
+            else 0
+        )
+        monthly_stats.append(
+            MonthlyAttendanceStats(
+                year=year,
+                month=month,
+                visit_count=stats["visit_count"],
+                total_minutes=stats["total_minutes"],
+                average_minutes=avg,
+            )
+        )
+
+    this_month_key = (today.year, today.month)
+    this_month_raw = monthly_map.get(this_month_key, {"visit_count": 0, "total_minutes": 0, "completed_count": 0})
+    this_month_avg = (
+        round(this_month_raw["total_minutes"] / this_month_raw["completed_count"])
+        if this_month_raw["completed_count"] > 0
+        else 0
+    )
+    this_month = MonthlyAttendanceStats(
+        year=today.year,
+        month=today.month,
+        visit_count=this_month_raw["visit_count"],
+        total_minutes=this_month_raw["total_minutes"],
+        average_minutes=this_month_avg,
+    )
+
+    return AttendanceSummaryResponse(
+        total_visits=len(rows),
+        total_minutes=total_minutes,
+        average_minutes=round(total_minutes / completed_count) if completed_count > 0 else 0,
+        this_month=this_month,
+        monthly_stats=monthly_stats,
+        recent_visits=recent_visits[:50],
+    )
+
+
 def _format_time(dt: datetime) -> str:
     return format_time_app(dt)
 
@@ -289,11 +392,12 @@ async def study_calendar(
             for att, seat_name in att_list:
                 cin = _format_time(att.check_in_time)
                 cout = _format_time(att.check_out_time) if att.check_out_time else "未退室"
-                subs = ", ".join(
-                    f"{s.subject}" for s in study_list if getattr(s, "study_location", "school") == "school"
-                )
+                school_records = [
+                    s for s in study_list if getattr(s, "study_location", "school") == "school"
+                ]
                 detail = f"塾 {cin}-{cout} ({seat_name or '?'})"
-                if subs:
+                if school_records:
+                    subs = "、".join(f"{s.subject} {s.topic_unit}" for s in school_records)
                     detail += f" ({subs})"
                 lines.append(detail)
             for s in study_list:
@@ -318,7 +422,7 @@ async def study_calendar(
 
 @router.get("/live", response_model=list[ActiveSeatStatus])
 async def live_status(
-    _: Student = Depends(require_admin),
+    _: Student = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     seats_result = await db.execute(select(Seat).order_by(Seat.seat_name))

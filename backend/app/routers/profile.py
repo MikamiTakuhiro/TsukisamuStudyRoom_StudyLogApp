@@ -11,6 +11,10 @@ from app.services.auth_service import is_read_only_user
 router = APIRouter(prefix="/profile", tags=["profile"])
 
 
+def _can_edit_own_profile(user: Student) -> bool:
+    return user.role in ("student", "admin")
+
+
 def _user_response(user: Student) -> UserResponse:
     return UserResponse(
         student_id=user.student_id,
@@ -29,8 +33,8 @@ def _user_response(user: Student) -> UserResponse:
 
 @router.get("/me", response_model=UserResponse)
 async def get_profile(user: Student = Depends(get_current_user)):
-    if user.role != "student":
-        raise HTTPException(status_code=403, detail="生徒のみ編集できます")
+    if not _can_edit_own_profile(user):
+        raise HTTPException(status_code=403, detail="プロフィール編集権限がありません")
     return _user_response(user)
 
 
@@ -49,7 +53,7 @@ async def view_profile(
         resp = _user_response(child)
         resp.is_read_only = True
         return resp
-    if user.role == "student":
+    if user.role == "student" or user.role == "admin":
         return _user_response(user)
     raise HTTPException(status_code=403, detail="権限がありません")
 
@@ -60,8 +64,8 @@ async def update_profile(
     user: Student = Depends(require_writable),
     db: AsyncSession = Depends(get_db),
 ):
-    if user.role != "student":
-        raise HTTPException(status_code=403, detail="生徒のみ編集できます")
+    if not _can_edit_own_profile(user):
+        raise HTTPException(status_code=403, detail="プロフィール編集権限がありません")
     if body.phone is not None:
         user.phone = body.phone
     if body.email is not None:

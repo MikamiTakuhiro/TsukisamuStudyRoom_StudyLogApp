@@ -1,5 +1,5 @@
 from app.models.student import LoginSession, Student
-from app.models.attendance import Attendance, DailyStudyRecord, Seat
+from app.models.attendance import Attendance, DailyStudyRecord, Seat, SeatReservation
 from app.models.academic import (
     AspirationSchoolHistory,
     ExamResult,
@@ -14,6 +14,7 @@ __all__ = [
     "Seat",
     "Attendance",
     "DailyStudyRecord",
+    "SeatReservation",
     "AspirationSchoolHistory",
     "ExamResult",
     "StudyPlan",

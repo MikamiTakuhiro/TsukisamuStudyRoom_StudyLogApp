@@ -4,12 +4,15 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
-from app.routers import admin, attendance, auth, notifications, academic, profile
+from app.routers import admin, attendance, auth, notifications, academic, profile, reservations
+from app.services.scheduler import start_scheduler, stop_scheduler
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    start_scheduler()
     yield
+    stop_scheduler()
 
 
 app = FastAPI(
@@ -34,6 +37,7 @@ app.include_router(admin.router, prefix="/api")
 app.include_router(notifications.router, prefix="/api")
 app.include_router(academic.router, prefix="/api")
 app.include_router(profile.router, prefix="/api")
+app.include_router(reservations.router, prefix="/api")
 
 
 @app.get("/health")

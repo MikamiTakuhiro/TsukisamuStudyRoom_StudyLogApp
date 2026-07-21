@@ -33,3 +33,8 @@ def ensure_aware_as_app(dt: datetime) -> datetime:
     if dt.tzinfo is None:
         return dt.replace(tzinfo=APP_TZ)
     return dt.astimezone(APP_TZ)
+
+
+def combine_date_time_app(d: date, time_hm: str) -> datetime:
+    hour, minute = map(int, time_hm.split(":"))
+    return datetime(d.year, d.month, d.day, hour, minute, tzinfo=APP_TZ)

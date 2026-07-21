@@ -6,7 +6,8 @@ import { useRouter } from "next/navigation";
 import StudentShell from "@/components/StudentShell";
 import StudyCalendar from "@/components/StudyCalendar";
 import NotificationRow, { notificationTypeLabel, studyPlanFocusUrl } from "@/components/NotificationRow";
-import { attendanceApi, notificationsApi, STUDY_OPTIONS, type CalendarTargetPlan, type CalendarWeek, type NotificationItem } from "@/lib/api";
+import { Input } from "@/components/ui/Input";
+import { attendanceApi, notificationsApi, SUBJECTS, type CalendarTargetPlan, type CalendarWeek, type NotificationItem } from "@/lib/api";
 import { useAuth } from "@/lib/useAuth";
 import { vibrate } from "@/lib/auth";
 import { formatDateJa, formatDateTimeJa } from "@/lib/utils";
@@ -22,6 +23,7 @@ export default function DashboardPage() {
   } | null>(null);
   const [showStudyModal, setShowStudyModal] = useState(false);
   const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
+  const [unitInput, setUnitInput] = useState("");
   const [activeSeat, setActiveSeat] = useState<string | null>(null);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [openMenuId, setOpenMenuId] = useState<number | null>(null);
@@ -48,6 +50,7 @@ export default function DashboardPage() {
       vibrate([50, 30, 50]);
       setShowStudyModal(false);
       setSelectedSubject(null);
+      setUnitInput("");
       setWeeks(await attendanceApi.calendar(26));
     } catch (e) {
       alert(e instanceof Error ? e.message : "記録に失敗しました");
@@ -110,7 +113,8 @@ export default function DashboardPage() {
                   setDetailNotification(n);
                 }}
                 onUpdatePlan={
-                  n.notification_type === "plan_gap" || n.trigger_gap_detected
+                  n.notification_type !== "broadcast" &&
+                  (n.notification_type === "plan_gap" || n.trigger_gap_detected)
                     ? () => {
                         setOpenMenuId(null);
                         router.push(studyPlanFocusUrl(n.content));
@@ -212,7 +216,7 @@ export default function DashboardPage() {
             <h3 className="mb-4 text-lg font-bold text-black">今から勉強する内容</h3>
             {!selectedSubject ? (
               <div className="grid grid-cols-2 gap-3">
-                {Object.keys(STUDY_OPTIONS).map((subject) => (
+                {SUBJECTS.map((subject) => (
                   <button
                     key={subject}
                     type="button"
@@ -224,21 +228,32 @@ export default function DashboardPage() {
                 ))}
               </div>
             ) : (
-              <div className="space-y-2">
+              <div className="space-y-3">
                 <button type="button" onClick={() => setSelectedSubject(null)} className="font-bold text-[var(--navy)]">
                   ← 科目を選び直す
                 </button>
-                {STUDY_OPTIONS[selectedSubject].map((unit) => (
-                  <button
-                    key={unit}
-                    type="button"
-                    disabled={submitting}
-                    onClick={() => postStudy(selectedSubject, unit)}
-                    className="btn-primary block w-full touch-manipulation disabled:opacity-50"
-                  >
-                    {unit}
-                  </button>
-                ))}
+                <p className="text-sm font-bold text-[var(--navy)]">科目: {selectedSubject}</p>
+                <Input
+                  type="text"
+                  value={unitInput}
+                  onChange={(e) => setUnitInput(e.target.value)}
+                  placeholder="単元を入力（例: 二次関数、長文読解）"
+                  autoFocus
+                  maxLength={100}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && unitInput.trim()) {
+                      postStudy(selectedSubject, unitInput.trim());
+                    }
+                  }}
+                />
+                <button
+                  type="button"
+                  disabled={submitting || !unitInput.trim()}
+                  onClick={() => postStudy(selectedSubject, unitInput.trim())}
+                  className="btn-primary w-full touch-manipulation disabled:opacity-50"
+                >
+                  {submitting ? "記録中..." : "記録する"}
+                </button>
               </div>
             )}
             <button
@@ -246,6 +261,7 @@ export default function DashboardPage() {
               onClick={() => {
                 setShowStudyModal(false);
                 setSelectedSubject(null);
+                setUnitInput("");
               }}
               className="btn-secondary mt-4 w-full"
             >

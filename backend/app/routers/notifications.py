@@ -3,11 +3,11 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
-from app.deps import get_current_user, require_writable
+from app.deps import get_current_user, require_admin, require_writable
 from app.models.academic import Notification
 from app.models.student import Student
-from app.schemas import NotificationResponse, NotificationUpdateRequest
-from app.services.auth_service import resolve_effective_student_id
+from app.schemas import BroadcastNotificationRequest, NotificationResponse, NotificationUpdateRequest
+from app.services.auth_service import is_read_only_user, resolve_effective_student_id
 
 router = APIRouter(prefix="/notifications", tags=["notifications"])
 
@@ -75,10 +75,12 @@ async def update_notification(
 @router.delete("/{notification_id}")
 async def delete_notification(
     notification_id: int,
-    user: Student = Depends(require_writable),
+    user: Student = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     row = await _get_owned_notification(notification_id, user, db)
+    if row.notification_type != "broadcast" and is_read_only_user(user):
+        raise HTTPException(status_code=403, detail="閲覧専用モードです")
     await db.delete(row)
     await db.commit()
     return {"ok": True}

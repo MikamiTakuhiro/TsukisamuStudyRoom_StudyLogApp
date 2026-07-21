@@ -88,6 +88,57 @@ export type CalendarWeek = {
   days: CalendarDay[];
 };
 
+export type AttendanceVisitItem = {
+  attendance_id: number;
+  date: string;
+  seat_name: string | null;
+  check_in_time: string;
+  check_out_time: string | null;
+  duration_minutes: number | null;
+  is_forgotten_checkout: boolean;
+};
+
+export type MonthlyAttendanceStats = {
+  year: number;
+  month: number;
+  visit_count: number;
+  total_minutes: number;
+  average_minutes: number;
+};
+
+export type AttendanceSummary = {
+  total_visits: number;
+  total_minutes: number;
+  average_minutes: number;
+  this_month: MonthlyAttendanceStats;
+  monthly_stats: MonthlyAttendanceStats[];
+  recent_visits: AttendanceVisitItem[];
+};
+
+export type ReservationItem = {
+  reservation_id: number;
+  student_id: number;
+  student_name: string | null;
+  start_time: string;
+  end_time: string;
+};
+
+export type AvailabilitySlot = {
+  start_time: string;
+  end_time: string;
+  reserved_count: number;
+  total_seats: number;
+  available_seats: number;
+  is_full: boolean;
+};
+
+export type DayAvailability = {
+  date: string;
+  total_seats: number;
+  slots: AvailabilitySlot[];
+  reservations: ReservationItem[];
+};
+
 export type Aspiration = {
   aspiration_id: number;
   student_id: number;
@@ -134,7 +185,13 @@ export type StudentFullProfile = {
     check_out_time: string | null;
     is_forgotten_checkout: boolean;
   }[];
-  study_records: { record_id: number; subject: string; topic_unit: string; recorded_at: string }[];
+  study_records: {
+    record_id: number;
+    subject: string;
+    topic_unit: string;
+    study_location?: string;
+    recorded_at: string;
+  }[];
   notifications: NotificationItem[];
 };
 
@@ -155,12 +212,66 @@ export async function apiFetch<T>(path: string, options: RequestInit = {}): Prom
   };
   if (token) headers.Authorization = `Bearer ${token}`;
 
+  const apiUrl = `${getApiBase()}${path}`;
+  const method = options.method ?? "GET";
+  // #region agent log
+  fetch("http://127.0.0.1:7398/ingest/eb0e20ff-aebc-4de6-b969-8483ae77e5f2", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "36a705" },
+    body: JSON.stringify({
+      sessionId: "36a705",
+      runId: "pre-fix",
+      hypothesisId: "A-B",
+      location: "api.ts:apiFetch:pre",
+      message: "apiFetch attempt",
+      data: { apiBase: getApiBase(), apiUrl, path, method, hasToken: !!token, hostname: typeof window !== "undefined" ? window.location.hostname : "ssr" },
+      timestamp: Date.now(),
+    }),
+  }).catch(() => {});
+  // #endregion
+
   let res: Response;
   try {
-    res = await fetch(`${getApiBase()}${path}`, { ...options, headers });
-  } catch {
+    res = await fetch(apiUrl, { ...options, headers });
+  } catch (err) {
+    // #region agent log
+    fetch("http://127.0.0.1:7398/ingest/eb0e20ff-aebc-4de6-b969-8483ae77e5f2", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "36a705" },
+      body: JSON.stringify({
+        sessionId: "36a705",
+        runId: "pre-fix",
+        hypothesisId: "A-C-D",
+        location: "api.ts:apiFetch:catch",
+        message: "fetch network error",
+        data: {
+          apiUrl,
+          path,
+          method,
+          errorName: err instanceof Error ? err.name : "unknown",
+          errorMessage: err instanceof Error ? err.message : String(err),
+        },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    // #endregion
     throw new Error("サーバーに接続できません。APIのURLとWi-Fi接続を確認してください。");
   }
+  // #region agent log
+  fetch("http://127.0.0.1:7398/ingest/eb0e20ff-aebc-4de6-b969-8483ae77e5f2", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "36a705" },
+    body: JSON.stringify({
+      sessionId: "36a705",
+      runId: "pre-fix",
+      hypothesisId: "E",
+      location: "api.ts:apiFetch:response",
+      message: "fetch response received",
+      data: { apiUrl, path, method, status: res.status, ok: res.ok },
+      timestamp: Date.now(),
+    }),
+  }).catch(() => {});
+  // #endregion
   if (!res.ok) {
     const err = await res.json().catch(() => ({ detail: res.statusText }));
     throw new Error(typeof err.detail === "string" ? err.detail : "API error");
@@ -192,6 +303,7 @@ export const attendanceApi = {
   checkOut: () => apiFetch("/api/attendance/check-out", { method: "POST" }),
   timeline: () => apiFetch<TimelineDay[]>("/api/attendance/timeline"),
   calendar: (weeks = 26) => apiFetch<CalendarWeek[]>(`/api/attendance/calendar?weeks=${weeks}`),
+  summary: () => apiFetch<AttendanceSummary>("/api/attendance/summary"),
   createStudyRecord: (subject: string, topic_unit: string) =>
     apiFetch("/api/attendance/study-records", {
       method: "POST",
@@ -200,6 +312,23 @@ export const attendanceApi = {
   live: () => apiFetch<ActiveSeatStatus[]>("/api/attendance/live"),
   updateAttendance: (id: number, data: Record<string, unknown>) =>
     apiFetch(`/api/attendance/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
+};
+
+export const reservationsApi = {
+  availability: (date: string) => apiFetch<DayAvailability>(`/api/reservations/availability?date=${date}`),
+  mine: () => apiFetch<ReservationItem[]>("/api/reservations/mine"),
+  create: (data: { reservation_date: string; start_time: string; end_time: string }) =>
+    apiFetch<ReservationItem>("/api/reservations", { method: "POST", body: JSON.stringify(data) }),
+  update: (id: number, data: { reservation_date?: string; start_time?: string; end_time?: string }) =>
+    apiFetch<ReservationItem>(`/api/reservations/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
+  delete: (id: number) => apiFetch(`/api/reservations/${id}`, { method: "DELETE" }),
+  all: (from?: string, to?: string) => {
+    const params = new URLSearchParams();
+    if (from) params.set("from", from);
+    if (to) params.set("to", to);
+    const q = params.toString();
+    return apiFetch<ReservationItem[]>(`/api/reservations${q ? `?${q}` : ""}`);
+  },
 };
 
 export const academicApi = {
@@ -284,14 +413,15 @@ export const adminApi = {
   createSeat: (seat_name: string) =>
     apiFetch("/api/admin/seats", { method: "POST", body: JSON.stringify({ seat_name }) }),
   notifications: () => apiFetch<NotificationItem[]>("/api/admin/notifications"),
+  broadcastNotification: (content: string) =>
+    apiFetch<{ sent_count: number }>("/api/admin/notifications/broadcast", {
+      method: "POST",
+      body: JSON.stringify({ content }),
+    }),
   seedDemo: () =>
     apiFetch<{ user_id: string; initial_password: string; message: string }>("/api/admin/seed/demo", {
       method: "POST",
     }),
-  runForgottenCheckout: () =>
-    apiFetch<{ processed: number }>("/api/admin/cron/forgotten-checkout", { method: "POST" }),
-  runGapDetection: () =>
-    apiFetch<{ notifications_created: number }>("/api/admin/cron/detect-gaps", { method: "POST" }),
 };
 
 export const profileApi = {
