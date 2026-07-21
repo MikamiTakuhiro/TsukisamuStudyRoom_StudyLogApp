@@ -58,7 +58,9 @@ async def create_supabase_auth_user(user_id: str, password: str, role: str) -> s
 async def register_student_account(
     db: AsyncSession,
     *,
-    name: str,
+    name: str | None = None,
+    last_name: str | None = None,
+    first_name: str | None = None,
     grade: int,
     gender: str,
     role: str = "student",
@@ -69,10 +71,13 @@ async def register_student_account(
     if user_id is None:
         user_id = await generate_user_id(db, role)
 
+    full_name = name or f"{last_name or ''}{first_name or ''}"
     auth_id = await create_supabase_auth_user(user_id, password, role)
 
     student = Student(
-        name=name,
+        name=full_name,
+        last_name=last_name,
+        first_name=first_name,
         grade=grade,
         gender=gender,
         user_id=user_id,
@@ -86,7 +91,7 @@ async def register_student_account(
 
     if role == "student":
         parent = Student(
-            name=f"{name} 保護者",
+            name=f"{full_name} 保護者",
             grade=grade,
             gender=gender,
             user_id=f"{user_id}-p",
@@ -192,6 +197,22 @@ async def process_forgotten_checkouts(db: AsyncSession) -> int:
     count = result.scalar_one()
     await db.commit()
     return count
+
+
+async def reset_student_passwords(db: AsyncSession, student: Student) -> str:
+    """生徒と紐づく保護者のパスワードを同じ新パスワードにリセット"""
+    password = generate_initial_password()
+    student.password_hash = hash_password(password)
+    parent_result = await db.execute(
+        select(Student).where(
+            Student.role == "parent", Student.linked_student_id == student.student_id
+        )
+    )
+    parent = parent_result.scalar_one_or_none()
+    if parent:
+        parent.password_hash = hash_password(password)
+    await db.commit()
+    return password
 
 
 async def detect_study_plan_gaps(db: AsyncSession) -> int:

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import jsQR from "jsqr";
-import AppHeader from "@/components/AppHeader";
+import StudentShell from "@/components/StudentShell";
 import { attendanceApi } from "@/lib/api";
 import { useAuth } from "@/lib/useAuth";
 import { vibrate } from "@/lib/auth";
@@ -106,7 +106,7 @@ export default function ScanPage() {
   }
 
   if (loading || !user) {
-    return <div className="flex min-h-full items-center justify-center">読み込み中...</div>;
+    return <div className="flex min-h-full items-center justify-center font-bold text-black">読み込み中...</div>;
   }
 
   if (user.is_read_only) {
@@ -115,50 +115,49 @@ export default function ScanPage() {
   }
 
   return (
-    <div className="min-h-full bg-black">
-      <AppHeader title="QRスキャン" />
-      <div className="relative mx-auto max-w-lg">
-        {!scanResult ? (
-          <>
-            <video ref={videoRef} className="aspect-[3/4] w-full object-cover" playsInline muted />
-            <canvas ref={canvasRef} className="hidden" />
-            <p className="absolute bottom-4 left-0 right-0 text-center text-sm text-white/90">
-              座席のQRコードを枠内に合わせてください
-            </p>
-          </>
-        ) : (
-          <div className="bg-white p-6">
-            <h2 className="text-xl font-bold text-slate-900">確認</h2>
-            <div className="mt-4 space-y-2 rounded-xl bg-slate-50 p-4">
-              <p><span className="text-slate-500">座席:</span> <strong>{scanResult.seat.seat_name}</strong></p>
-              <p><span className="text-slate-500">名前:</span> <strong>{scanResult.student_name}</strong></p>
-              <p className="text-sm text-slate-600">
-                {scanResult.mode === "check_in" ? "入室しますか？" : "退室しますか？"}
+    <div className="min-h-full w-full max-w-full bg-[var(--navy)]">
+      <StudentShell title="QRスキャン" user={user}>
+        <div className="app-shell relative w-full">
+          {!scanResult ? (
+            <>
+              <video ref={videoRef} className="aspect-[3/4] w-full object-cover" playsInline muted />
+              <canvas ref={canvasRef} className="hidden" />
+              <p className="absolute bottom-4 left-0 right-0 text-center text-sm font-bold text-[var(--moon-yellow)]">
+                座席のQRコードを枠内に合わせてください
               </p>
+            </>
+          ) : (
+            <div className="bg-white p-6">
+              <h2 className="text-xl font-bold text-black">確認</h2>
+              <div className="mt-4 space-y-2 rounded-2xl bg-[var(--surface)] p-4">
+                <p className="text-black">
+                  <span className="font-bold">座席:</span> {scanResult.seat.seat_name}
+                </p>
+                <p className="text-black">
+                  <span className="font-bold">名前:</span> {scanResult.student_name}
+                </p>
+                <p className="text-sm font-medium text-black">
+                  {scanResult.mode === "check_in" ? "入室しますか？" : "退室しますか？"}
+                </p>
+              </div>
+              <div className="mt-6 flex gap-3">
+                <button type="button" onClick={() => router.push("/dashboard")} className="btn-secondary flex-1">
+                  キャンセル
+                </button>
+                <button
+                  type="button"
+                  onClick={confirmAction}
+                  disabled={processing}
+                  className={`flex-1 ${scanResult.mode === "check_in" ? "btn-accent" : "btn-accent btn-warn"}`}
+                >
+                  {processing ? "処理中..." : scanResult.mode === "check_in" ? "入室する" : "退室する"}
+                </button>
+              </div>
             </div>
-            <div className="mt-6 flex gap-3">
-              <button
-                onClick={() => router.push("/dashboard")}
-                className="flex-1 rounded-xl border border-slate-300 py-3 text-slate-700"
-              >
-                キャンセル
-              </button>
-              <button
-                onClick={confirmAction}
-                disabled={processing}
-                className={`flex-1 rounded-xl py-3 font-bold text-white ${
-                  scanResult.mode === "check_in" ? "bg-emerald-600 hover:bg-emerald-700" : "bg-orange-600 hover:bg-orange-700"
-                } disabled:opacity-60`}
-              >
-                {processing ? "処理中..." : scanResult.mode === "check_in" ? "入室する" : "退室する"}
-              </button>
-            </div>
-          </div>
-        )}
-        {error && (
-          <div className="bg-red-600 px-4 py-3 text-sm text-white">{error}</div>
-        )}
-      </div>
+          )}
+          {error && <div className="bg-red-600 px-4 py-3 text-sm font-bold text-white">{error}</div>}
+        </div>
+      </StudentShell>
     </div>
   );
 }

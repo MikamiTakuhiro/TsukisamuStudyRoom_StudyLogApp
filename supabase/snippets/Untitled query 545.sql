@@ -1,0 +1,1 @@
+DELETE FROM students WHERE role = 'admin';

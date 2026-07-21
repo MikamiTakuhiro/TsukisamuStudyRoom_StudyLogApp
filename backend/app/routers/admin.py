@@ -4,24 +4,35 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.deps import get_current_user, require_admin
-from app.models.academic import ExamResult, Notification
+from app.models.academic import AspirationSchoolHistory, ExamResult, Notification, StudyPlan
+from app.models.attendance import Attendance, DailyStudyRecord, Seat
 from app.models.student import Student
 from app.schemas import (
+    AccountExportResponse,
     AdminCreateRequest,
+    AspirationResponse,
+    AttendanceResponse,
+    ExamResultFullResponse,
     ExamResultResponse,
+    BroadcastNotificationRequest,
     NotificationResponse,
     SeatCreateRequest,
     SeatResponse,
+    SeatUpdateRequest,
     StudentCreateRequest,
     StudentCreateResponse,
+    StudentFullProfile,
+    StudentUpdateRequest,
+    StudyPlanResponse,
+    StudyRecordResponse,
     UserResponse,
 )
 from app.services.auth_service import (
-    detect_study_plan_gaps,
     is_read_only_user,
-    process_forgotten_checkouts,
     register_student_account,
+    reset_student_passwords,
 )
+from app.routers.academic import _plan_responses
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -35,6 +46,10 @@ def _user_response(user: Student) -> UserResponse:
         gender=user.gender,
         role=user.role,
         is_read_only=is_read_only_user(user),
+        phone=user.phone,
+        email=user.email,
+        birth_date=user.birth_date,
+        school_name=user.school_name,
     )
 
 
@@ -45,7 +60,12 @@ async def create_student(
     db: AsyncSession = Depends(get_db),
 ):
     student, password = await register_student_account(
-        db, name=body.name, grade=body.grade, gender=body.gender, role="student"
+        db,
+        last_name=body.last_name,
+        first_name=body.first_name,
+        grade=body.grade,
+        gender=body.gender,
+        role="student",
     )
     return StudentCreateResponse(
         student=_user_response(student),
@@ -81,6 +101,139 @@ async def list_students(
 ):
     result = await db.execute(select(Student).where(Student.role == "student").order_by(Student.user_id))
     return [_user_response(s) for s in result.scalars()]
+
+
+@router.get("/students/{student_id}/full", response_model=StudentFullProfile)
+async def get_student_full(
+    student_id: int,
+    user: Student = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    if user.role == "student" and user.student_id != student_id:
+        raise HTTPException(status_code=403, detail="権限がありません")
+    if user.role == "parent" and user.linked_student_id != student_id:
+        raise HTTPException(status_code=403, detail="権限がありません")
+    if user.role not in ("admin", "student", "parent"):
+        raise HTTPException(status_code=403, detail="権限がありません")
+
+    student_result = await db.execute(
+        select(Student).where(Student.student_id == student_id, Student.role == "student")
+    )
+    student = student_result.scalar_one_or_none()
+    if not student:
+        raise HTTPException(status_code=404, detail="生徒が見つかりません")
+
+    asp = await db.execute(
+        select(AspirationSchoolHistory)
+        .where(AspirationSchoolHistory.student_id == student_id)
+        .order_by(AspirationSchoolHistory.priority_rank)
+    )
+    exams = await db.execute(
+        select(ExamResult).where(ExamResult.student_id == student_id).order_by(ExamResult.exam_date.desc())
+    )
+    att = await db.execute(
+        select(Attendance, Seat.seat_name)
+        .join(Seat, Seat.seat_id == Attendance.seat_id)
+        .where(Attendance.student_id == student_id)
+        .order_by(Attendance.check_in_time.desc())
+    )
+    study = await db.execute(
+        select(DailyStudyRecord)
+        .where(DailyStudyRecord.student_id == student_id)
+        .order_by(DailyStudyRecord.recorded_at.desc())
+    )
+    notif = await db.execute(
+        select(Notification).where(Notification.student_id == student_id).order_by(Notification.sent_at.desc())
+    )
+
+    attendances = [
+        AttendanceResponse(
+            attendance_id=a.attendance_id,
+            student_id=a.student_id,
+            seat_id=a.seat_id,
+            seat_name=seat_name,
+            check_in_time=a.check_in_time,
+            check_out_time=a.check_out_time,
+            is_forgotten_checkout=a.is_forgotten_checkout,
+        )
+        for a, seat_name in att.all()
+    ]
+
+    return StudentFullProfile(
+        student=_user_response(student),
+        aspirations=list(asp.scalars()),
+        study_plans=await _plan_responses(db, student_id),
+        exam_results=list(exams.scalars()),
+        attendances=attendances,
+        study_records=[
+            StudyRecordResponse(
+                record_id=r.record_id,
+                subject=r.subject,
+                topic_unit=r.topic_unit,
+                study_location=getattr(r, "study_location", "school") or "school",
+                recorded_at=r.recorded_at,
+            )
+            for r in study.scalars()
+        ],
+        notifications=list(notif.scalars()),
+    )
+
+
+@router.patch("/students/{student_id}", response_model=UserResponse)
+async def update_student(
+    student_id: int,
+    body: StudentUpdateRequest,
+    _: Student = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(
+        select(Student).where(Student.student_id == student_id, Student.role == "student")
+    )
+    student = result.scalar_one_or_none()
+    if not student:
+        raise HTTPException(status_code=404, detail="生徒が見つかりません")
+    if body.name is not None:
+        student.name = body.name
+    if body.grade is not None:
+        student.grade = body.grade
+    if body.gender is not None:
+        student.gender = body.gender
+    if body.phone is not None:
+        student.phone = body.phone or None
+    if body.email is not None:
+        student.email = body.email or None
+    if body.birth_date is not None:
+        student.birth_date = body.birth_date
+    if body.school_name is not None:
+        student.school_name = body.school_name or None
+    await db.commit()
+    await db.refresh(student)
+    return _user_response(student)
+
+
+@router.post("/students/{student_id}/account-export", response_model=AccountExportResponse)
+async def export_student_account(
+    student_id: int,
+    _: Student = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(
+        select(Student).where(Student.student_id == student_id, Student.role == "student")
+    )
+    student = result.scalar_one_or_none()
+    if not student:
+        raise HTTPException(status_code=404, detail="生徒が見つかりません")
+    new_password = await reset_student_passwords(db, student)
+    parent_result = await db.execute(
+        select(Student).where(Student.role == "parent", Student.linked_student_id == student_id)
+    )
+    parent = parent_result.scalar_one_or_none()
+    return AccountExportResponse(
+        name=student.name,
+        user_id=student.user_id,
+        parent_user_id=parent.user_id if parent else None,
+        new_password=new_password,
+    )
 
 
 @router.get("/students/{student_id}/exams", response_model=list[ExamResultResponse])
@@ -129,6 +282,47 @@ async def list_seats(
     return list(result.scalars())
 
 
+@router.patch("/seats/{seat_id}", response_model=SeatResponse)
+async def update_seat(
+    seat_id: int,
+    body: SeatUpdateRequest,
+    _: Student = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    from app.models.attendance import Seat
+
+    result = await db.execute(select(Seat).where(Seat.seat_id == seat_id))
+    seat = result.scalar_one_or_none()
+    if not seat:
+        raise HTTPException(status_code=404, detail="座席が見つかりません")
+    if body.seat_name is not None:
+        seat.seat_name = body.seat_name
+    if body.qr_code_data is not None:
+        seat.qr_code_data = body.qr_code_data
+    elif body.seat_name is not None:
+        seat.qr_code_data = f"seat:{body.seat_name}"
+    await db.commit()
+    await db.refresh(seat)
+    return seat
+
+
+@router.delete("/seats/{seat_id}")
+async def delete_seat(
+    seat_id: int,
+    _: Student = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    from app.models.attendance import Seat
+
+    result = await db.execute(select(Seat).where(Seat.seat_id == seat_id))
+    seat = result.scalar_one_or_none()
+    if not seat:
+        raise HTTPException(status_code=404, detail="座席が見つかりません")
+    await db.delete(seat)
+    await db.commit()
+    return {"ok": True}
+
+
 @router.get("/notifications", response_model=list[NotificationResponse])
 async def list_notifications(
     _: Student = Depends(require_admin),
@@ -140,22 +334,32 @@ async def list_notifications(
     return list(result.scalars())
 
 
-@router.post("/cron/forgotten-checkout")
-async def run_forgotten_checkout(
+@router.post("/notifications/broadcast")
+async def broadcast_notification(
+    body: BroadcastNotificationRequest,
     _: Student = Depends(require_admin),
     db: AsyncSession = Depends(get_db),
 ):
-    count = await process_forgotten_checkouts(db)
-    return {"processed": count}
+    content = body.content.strip()
+    if not content:
+        raise HTTPException(status_code=400, detail="内容を入力してください")
 
+    students_result = await db.execute(select(Student).where(Student.role == "student"))
+    students = students_result.scalars().all()
+    if not students:
+        return {"sent_count": 0}
 
-@router.post("/cron/detect-gaps")
-async def run_gap_detection(
-    _: Student = Depends(require_admin),
-    db: AsyncSession = Depends(get_db),
-):
-    count = await detect_study_plan_gaps(db)
-    return {"notifications_created": count}
+    for student in students:
+        db.add(
+            Notification(
+                student_id=student.student_id,
+                notification_type="broadcast",
+                content=content,
+                trigger_gap_detected=False,
+            )
+        )
+    await db.commit()
+    return {"sent_count": len(students)}
 
 
 @router.post("/seed/demo")

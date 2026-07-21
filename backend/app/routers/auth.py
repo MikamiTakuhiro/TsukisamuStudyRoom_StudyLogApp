@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, Header, HTTPException, status
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
@@ -24,7 +25,32 @@ def _user_response(user: Student) -> UserResponse:
         gender=user.gender,
         role=user.role,
         is_read_only=is_read_only_user(user),
+        phone=getattr(user, "phone", None),
+        email=getattr(user, "email", None),
+        birth_date=getattr(user, "birth_date", None),
+        school_name=getattr(user, "school_name", None),
     )
+
+
+async def _effective_user_response(db: AsyncSession, user: Student) -> UserResponse:
+    if user.role == "parent" and user.linked_student_id:
+        result = await db.execute(select(Student).where(Student.student_id == user.linked_student_id))
+        child = result.scalar_one_or_none()
+        if child:
+            return UserResponse(
+                student_id=user.student_id,
+                user_id=user.user_id,
+                name=child.name,
+                grade=child.grade,
+                gender=child.gender,
+                role="parent",
+                is_read_only=True,
+                phone=child.phone,
+                email=child.email,
+                birth_date=child.birth_date,
+                school_name=child.school_name,
+            )
+    return _user_response(user)
 
 
 @router.post("/login", response_model=LoginResponse)
@@ -38,13 +64,13 @@ async def login(body: LoginRequest, db: AsyncSession = Depends(get_db)):
         token=session.token,
         expires_at=session.expires_at,
         session_type=session.session_type,
-        user=_user_response(user),
+        user=await _effective_user_response(db, user),
     )
 
 
 @router.get("/me", response_model=UserResponse)
-async def me(user: Student = Depends(get_current_user)):
-    return _user_response(user)
+async def me(user: Student = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    return await _effective_user_response(db, user)
 
 
 @router.post("/logout")
