@@ -68,7 +68,7 @@ export default function AdminStudentDetailPage() {
       <div className="app-shell w-full space-y-6 px-4 py-6 pb-12">
         <div className="flex flex-wrap gap-2">
           <Link href="/admin" className="font-bold text-[var(--navy)] underline">
-            ← 運用・管理
+            ← 運営・管理
           </Link>
           <Link href={`/admin/analytics/students/${studentId}`} className="btn-primary text-sm">
             分析グラフ

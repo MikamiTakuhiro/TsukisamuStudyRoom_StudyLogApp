@@ -1,6 +1,4 @@
 from datetime import date, datetime, timedelta
-import json
-import time
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func, select
@@ -22,32 +20,10 @@ from app.timezone_utils import APP_TZ, app_date, combine_date_time_app, now_app
 
 router = APIRouter(prefix="/reservations", tags=["reservations"])
 
-DAY_OPEN_HOUR = 9
-DAY_CLOSE_HOUR = 21
-SLOT_MINUTES = 60
-DEBUG_LOG = "/Users/mikamitakuhiroshi/TsukisamuStudyRoom_StudyLogApp/.cursor/debug-36a705.log"
-
-
-def _debug_log(location: str, message: str, data: dict, hypothesis_id: str) -> None:
-    try:
-        with open(DEBUG_LOG, "a", encoding="utf-8") as f:
-            f.write(
-                json.dumps(
-                    {
-                        "sessionId": "36a705",
-                        "runId": "pre-fix",
-                        "hypothesisId": hypothesis_id,
-                        "location": location,
-                        "message": message,
-                        "data": data,
-                        "timestamp": int(time.time() * 1000),
-                    },
-                    ensure_ascii=False,
-                )
-                + "\n"
-            )
-    except OSError:
-        pass
+# 空き状況表示: 18:00〜22:00 を30分刻み
+AVAILABILITY_OPEN = (18, 0)
+AVAILABILITY_CLOSE = (22, 0)
+SLOT_MINUTES = 30
 
 
 def _reservation_response(res: SeatReservation, student_name: str | None = None) -> ReservationResponse:
@@ -129,31 +105,30 @@ async def day_availability(
     user: Student = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    _debug_log("reservations.py:day_availability", "entry", {"date": str(target_date), "user_id": user.user_id}, "D")
-    try:
-        total = await _total_seats(db)
-        day_res = await _day_reservations(db, target_date)
-    except Exception as e:
-        _debug_log("reservations.py:day_availability", "db_error", {"error": type(e).__name__, "msg": str(e)[:200]}, "D")
-        raise
+    total = await _total_seats(db)
+    day_res = await _day_reservations(db, target_date)
     reservations = [r for r, _ in day_res]
 
+    open_dt = combine_date_time_app(target_date, f"{AVAILABILITY_OPEN[0]:02d}:{AVAILABILITY_OPEN[1]:02d}")
+    close_dt = combine_date_time_app(target_date, f"{AVAILABILITY_CLOSE[0]:02d}:{AVAILABILITY_CLOSE[1]:02d}")
+
     slots: list[AvailabilitySlot] = []
-    for hour in range(DAY_OPEN_HOUR, DAY_CLOSE_HOUR):
-        slot_start = combine_date_time_app(target_date, f"{hour:02d}:00")
-        slot_end = slot_start + timedelta(minutes=SLOT_MINUTES)
+    slot_start = open_dt
+    while slot_start < close_dt:
+        slot_end = min(slot_start + timedelta(minutes=SLOT_MINUTES), close_dt)
         reserved = _max_concurrent(reservations, slot_start, slot_end)
         available = max(0, total - reserved)
         slots.append(
             AvailabilitySlot(
-                start_time=f"{hour:02d}:00",
-                end_time=f"{(hour + 1):02d}:00",
+                start_time=slot_start.strftime("%H:%M"),
+                end_time=slot_end.strftime("%H:%M"),
                 reserved_count=reserved,
                 total_seats=total,
                 available_seats=available,
                 is_full=total > 0 and reserved >= total,
             )
         )
+        slot_start = slot_end
 
     reservation_items = [_reservation_response(r, name) for r, name in day_res]
     if not is_admin_user(user):
@@ -212,7 +187,6 @@ async def create_reservation(
     user: Student = Depends(require_writable),
     db: AsyncSession = Depends(get_db),
 ):
-    _debug_log("reservations.py:create_reservation", "entry", {"date": str(body.reservation_date), "user_id": user.user_id}, "D")
     start = combine_date_time_app(body.reservation_date, body.start_time)
     end = combine_date_time_app(body.reservation_date, body.end_time)
     if end <= start:

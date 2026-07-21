@@ -212,66 +212,12 @@ export async function apiFetch<T>(path: string, options: RequestInit = {}): Prom
   };
   if (token) headers.Authorization = `Bearer ${token}`;
 
-  const apiUrl = `${getApiBase()}${path}`;
-  const method = options.method ?? "GET";
-  // #region agent log
-  fetch("http://127.0.0.1:7398/ingest/eb0e20ff-aebc-4de6-b969-8483ae77e5f2", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "36a705" },
-    body: JSON.stringify({
-      sessionId: "36a705",
-      runId: "pre-fix",
-      hypothesisId: "A-B",
-      location: "api.ts:apiFetch:pre",
-      message: "apiFetch attempt",
-      data: { apiBase: getApiBase(), apiUrl, path, method, hasToken: !!token, hostname: typeof window !== "undefined" ? window.location.hostname : "ssr" },
-      timestamp: Date.now(),
-    }),
-  }).catch(() => {});
-  // #endregion
-
   let res: Response;
   try {
-    res = await fetch(apiUrl, { ...options, headers });
-  } catch (err) {
-    // #region agent log
-    fetch("http://127.0.0.1:7398/ingest/eb0e20ff-aebc-4de6-b969-8483ae77e5f2", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "36a705" },
-      body: JSON.stringify({
-        sessionId: "36a705",
-        runId: "pre-fix",
-        hypothesisId: "A-C-D",
-        location: "api.ts:apiFetch:catch",
-        message: "fetch network error",
-        data: {
-          apiUrl,
-          path,
-          method,
-          errorName: err instanceof Error ? err.name : "unknown",
-          errorMessage: err instanceof Error ? err.message : String(err),
-        },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
+    res = await fetch(`${getApiBase()}${path}`, { ...options, headers });
+  } catch {
     throw new Error("サーバーに接続できません。APIのURLとWi-Fi接続を確認してください。");
   }
-  // #region agent log
-  fetch("http://127.0.0.1:7398/ingest/eb0e20ff-aebc-4de6-b969-8483ae77e5f2", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "36a705" },
-    body: JSON.stringify({
-      sessionId: "36a705",
-      runId: "pre-fix",
-      hypothesisId: "E",
-      location: "api.ts:apiFetch:response",
-      message: "fetch response received",
-      data: { apiUrl, path, method, status: res.status, ok: res.ok },
-      timestamp: Date.now(),
-    }),
-  }).catch(() => {});
-  // #endregion
   if (!res.ok) {
     const err = await res.json().catch(() => ({ detail: res.statusText }));
     throw new Error(typeof err.detail === "string" ? err.detail : "API error");

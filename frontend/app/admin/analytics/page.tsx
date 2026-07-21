@@ -39,7 +39,7 @@ export default function AdminAnalyticsPage() {
     <AdminShell title="分析ダッシュボード">
       <div className="app-shell w-full space-y-6 px-4 py-6 pb-12">
         <p className="text-sm font-medium text-black">
-          全生徒のデータを統合した概要です。詳細は右上メニューから各分析ページへ移動できます。
+          全生徒のデータを統合した概要です。詳細は「生徒別分析」から各生徒の統合グラフを確認できます。
         </p>
 
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">

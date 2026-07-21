@@ -54,7 +54,6 @@ export default function StudyCalendar({
   fillHeight?: boolean;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
-  const bottomRef = useRef<HTMLDivElement>(null);
   const weekRefs = useRef<(HTMLDivElement | null)[]>([]);
 
   const initial = useMemo(() => {
@@ -98,7 +97,10 @@ export default function StudyCalendar({
     const last = getWeekBottomMonth(weeks[weeks.length - 1]);
     setVisibleYear(last.year);
     setVisibleMonth(last.month);
-    bottomRef.current?.scrollIntoView({ behavior: "instant" });
+    const container = scrollRef.current;
+    if (container) {
+      container.scrollTop = container.scrollHeight;
+    }
     requestAnimationFrame(updateVisibleMonth);
   }, [weeks, updateVisibleMonth]);
 
@@ -176,7 +178,7 @@ export default function StudyCalendar({
             </div>
           );
         })}
-        <div ref={bottomRef} className="h-1" />
+        <div className="h-1" />
       </div>
 
       <div className="mt-2 flex shrink-0 flex-wrap gap-2 border-t border-[var(--border)] px-1 pt-2 text-xs font-bold text-black">

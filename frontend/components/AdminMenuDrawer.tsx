@@ -6,12 +6,9 @@ import { authApi } from "@/lib/api";
 import { clearSession } from "@/lib/auth";
 
 const LINKS = [
+  { href: "/admin", label: "運営・管理" },
   { href: "/admin/analytics", label: "分析ダッシュボード" },
   { href: "/admin/analytics/students", label: "生徒別分析" },
-  { href: "/admin/analytics/attendance", label: "出席・座席分析" },
-  { href: "/admin/analytics/study", label: "学習記録分析" },
-  { href: "/admin/analytics/exams", label: "模試結果分析" },
-  { href: "/admin", label: "運用・管理" },
   { href: "/admin/reservations", label: "予約管理" },
   { href: "/admin/profile", label: "プロフィール" },
 ];

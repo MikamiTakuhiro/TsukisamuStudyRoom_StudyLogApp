@@ -2,18 +2,19 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import MenuNavIcon, { type MenuNavIconName } from "@/components/MenuNavIcon";
 import { authApi } from "@/lib/api";
 import { clearSession } from "@/lib/auth";
 
-const LINKS = [
-  { href: "/dashboard", label: "ホーム" },
-  { href: "/attendance", label: "来塾記録" },
-  { href: "/reservations", label: "来塾予約" },
-  { href: "/live", label: "リアルタイム出席" },
-  { href: "/aspirations", label: "志望校" },
-  { href: "/study-plans", label: "学習計画" },
-  { href: "/exams", label: "模試結果" },
-  { href: "/profile", label: "プロフィール" },
+const LINKS: { href: string; label: string; icon: MenuNavIconName }[] = [
+  { href: "/dashboard", label: "ホーム", icon: "home" },
+  { href: "/attendance", label: "来塾記録", icon: "attendance" },
+  { href: "/reservations", label: "来塾予約", icon: "reservations" },
+  { href: "/live", label: "リアルタイム出席", icon: "live" },
+  { href: "/aspirations", label: "志望校", icon: "aspirations" },
+  { href: "/study-plans", label: "学習計画", icon: "study-plans" },
+  { href: "/exams", label: "模試結果", icon: "exams" },
+  { href: "/profile", label: "プロフィール", icon: "profile" },
 ];
 
 export default function MenuDrawer({
@@ -59,7 +60,8 @@ export default function MenuDrawer({
               onClick={onClose}
               className="menu-nav-link"
             >
-              {link.label}
+              <MenuNavIcon name={link.icon} />
+              <span>{link.label}</span>
             </Link>
           ))}
         </nav>

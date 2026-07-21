@@ -1,15 +1,24 @@
 "use client";
 
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import AdminShell from "@/components/AdminShell";
+import { Input } from "@/components/ui/Input";
 import { useAdminProfiles } from "@/lib/useAdminProfiles";
 import { useRequireAdmin } from "@/lib/useRequireAdmin";
 import { gradeLabel } from "@/lib/grades";
 import { studyEfficiencyIndex, studyPlanCompletionRate } from "@/lib/adminAnalytics";
+import { filterStudentsBySearch } from "@/lib/studentSearch";
 
 export default function AdminStudentsAnalyticsPage() {
   const { ready } = useRequireAdmin();
   const { students, profiles, loading, error } = useAdminProfiles();
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const filteredStudents = useMemo(
+    () => filterStudentsBySearch(students, searchQuery),
+    [students, searchQuery],
+  );
 
   if (!ready || loading) {
     return (
@@ -32,17 +41,38 @@ export default function AdminStudentsAnalyticsPage() {
   return (
     <AdminShell title="生徒別分析">
       <div className="app-shell w-full space-y-4 px-4 py-6 pb-12">
+        <div className="card space-y-3">
+          <label htmlFor="student-search" className="block text-sm font-bold text-black">
+            生徒を検索
+          </label>
+          <Input
+            id="student-search"
+            type="search"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="名前・IDで検索（ひらがな入力中も絞り込み）"
+            autoComplete="off"
+          />
+          {searchQuery && (
+            <p className="text-xs font-medium text-[var(--navy)]">
+              {filteredStudents.length}名が該当（全{students.length}名）
+            </p>
+          )}
+        </div>
+
         <p className="text-sm font-medium text-black">
           生徒を選ぶと、学習量・志望校・座席・模試を統合したグラフが表示されます。
         </p>
-        {students.map((s) => {
+
+        {filteredStudents.map((s) => {
           const p = profileMap.get(s.student_id);
           return (
             <div key={s.student_id} className="card flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <p className="text-lg font-bold text-black">{s.name}</p>
                 <p className="text-sm text-black">
-                  {gradeLabel(s.grade)} / 記録 {p?.study_records.length ?? 0}件 / 来室 {p?.attendances.length ?? 0}回
+                  ID: {s.user_id} / {gradeLabel(s.grade)} / 記録 {p?.study_records.length ?? 0}件 / 来室{" "}
+                  {p?.attendances.length ?? 0}回
                 </p>
                 {p && (
                   <p className="mt-1 text-xs font-medium text-[var(--navy)]">
@@ -56,7 +86,11 @@ export default function AdminStudentsAnalyticsPage() {
             </div>
           );
         })}
+
         {students.length === 0 && <p className="font-medium text-black">生徒が登録されていません。</p>}
+        {students.length > 0 && filteredStudents.length === 0 && (
+          <p className="font-medium text-black">該当する生徒が見つかりません。</p>
+        )}
       </div>
     </AdminShell>
   );

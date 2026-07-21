@@ -16,53 +16,19 @@ export default function ReservationsPage() {
   const [selectedDate, setSelectedDate] = useState(todayIso());
   const [availability, setAvailability] = useState<DayAvailability | null>(null);
   const [myReservations, setMyReservations] = useState<ReservationItem[]>([]);
-  const [startTime, setStartTime] = useState("14:00");
-  const [endTime, setEndTime] = useState("17:00");
+  const [startTime, setStartTime] = useState("18:00");
+  const [endTime, setEndTime] = useState("20:00");
   const [submitting, setSubmitting] = useState(false);
 
   const isReadOnly = user?.is_read_only ?? false;
 
   const reload = useCallback(async () => {
-    // #region agent log
-    fetch("http://127.0.0.1:7398/ingest/eb0e20ff-aebc-4de6-b969-8483ae77e5f2", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "36a705" },
-      body: JSON.stringify({
-        sessionId: "36a705",
-        runId: "pre-fix",
-        hypothesisId: "B",
-        location: "reservations/page.tsx:reload:start",
-        message: "reload reservations",
-        data: { selectedDate },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
-    try {
-      const [avail, mine] = await Promise.all([
-        reservationsApi.availability(selectedDate),
-        reservationsApi.mine(),
-      ]);
-      setAvailability(avail);
-      setMyReservations(mine);
-    } catch (err) {
-      // #region agent log
-      fetch("http://127.0.0.1:7398/ingest/eb0e20ff-aebc-4de6-b969-8483ae77e5f2", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "36a705" },
-        body: JSON.stringify({
-          sessionId: "36a705",
-          runId: "pre-fix",
-          hypothesisId: "B-D",
-          location: "reservations/page.tsx:reload:error",
-          message: "reload failed",
-          data: { selectedDate, error: err instanceof Error ? err.message : String(err) },
-          timestamp: Date.now(),
-        }),
-      }).catch(() => {});
-      // #endregion
-      throw err;
-    }
+    const [avail, mine] = await Promise.all([
+      reservationsApi.availability(selectedDate),
+      reservationsApi.mine(),
+    ]);
+    setAvailability(avail);
+    setMyReservations(mine);
   }, [selectedDate]);
 
   useEffect(() => {
@@ -107,7 +73,7 @@ export default function ReservationsPage() {
         {availability && (
           <section className="card">
             <h2 className="section-title mb-3">
-              {formatDateJa(selectedDate)} の空き状況（座席 {availability.total_seats} 席）
+              {formatDateJa(selectedDate)} の空き状況（18:00〜22:00・30分単位 / 座席 {availability.total_seats} 席）
             </h2>
             {availability.total_seats === 0 ? (
               <p className="text-sm font-medium text-black">座席が登録されていません。</p>

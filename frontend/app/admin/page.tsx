@@ -105,14 +105,14 @@ export default function AdminPage() {
 
   if (!ready) {
     return (
-      <AdminShell title="運用・管理">
+      <AdminShell title="運営・管理">
         <div className="flex min-h-full items-center justify-center font-bold text-black">読み込み中...</div>
       </AdminShell>
     );
   }
 
   return (
-    <AdminShell title="運用・管理">
+    <AdminShell title="運営・管理">
       <div className="app-shell w-full space-y-6 px-4 py-6 pb-12">
         <div className="flex flex-wrap gap-2">
           <Link href="/admin/analytics" className="btn-accent text-sm">
