@@ -618,6 +618,17 @@ a.btn-secondary {
   color: var(--navy);
 }
 
+.furigana-ruby {
+  ruby-align: center;
+}
+
+.furigana-ruby rt {
+  font-size: 0.32em;
+  font-weight: 600;
+  color: var(--navy);
+  letter-spacing: 0;
+}
+
 .menu-nav-link:hover {
   background: rgba(255, 213, 79, 0.4);
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { Ft } from "@/components/FuriganaText";
 import type { NotificationItem } from "@/lib/api";
 
 type Props = {
@@ -57,7 +58,7 @@ export default function NotificationRow({
     >
       {notification.notification_type === "broadcast" && (
         <span className="shrink-0 rounded-md bg-orange-500 px-1.5 py-0.5 text-[10px] font-bold text-white">
-          お知らせ
+          <Ft>お知らせ</Ft>
         </span>
       )}
       <p className="min-w-0 flex-1 text-sm font-medium text-black">{notification.content}</p>
@@ -74,11 +75,11 @@ export default function NotificationRow({
         {menuOpen && (
           <div className="notification-menu" role="menu">
             <button type="button" role="menuitem" className="notification-menu-item" onClick={onDetail}>
-              詳細
+              <Ft>詳細</Ft>
             </button>
             {onUpdatePlan && (
               <button type="button" role="menuitem" className="notification-menu-item" onClick={onUpdatePlan}>
-                学習計画の更新
+                <Ft>学習計画の更新</Ft>
               </button>
             )}
             {!isReadOnly && (
@@ -88,7 +89,7 @@ export default function NotificationRow({
                 className="notification-menu-item notification-menu-item-danger"
                 onClick={onDelete}
               >
-                削除
+                <Ft>削除</Ft>
               </button>
             )}
             {isReadOnly && notification.notification_type === "broadcast" && (
@@ -98,7 +99,7 @@ export default function NotificationRow({
                 className="notification-menu-item notification-menu-item-danger"
                 onClick={onDelete}
               >
-                削除
+                <Ft>削除</Ft>
               </button>
             )}
           </div>

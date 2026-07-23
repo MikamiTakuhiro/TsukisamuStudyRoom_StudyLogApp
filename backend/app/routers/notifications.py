@@ -8,6 +8,7 @@ from app.models.academic import Notification
 from app.models.student import Student
 from app.schemas import BroadcastNotificationRequest, NotificationResponse, NotificationUpdateRequest
 from app.services.auth_service import is_read_only_user, resolve_effective_student_id
+from app.services.notification_service import purge_completed_plan_gap_notifications
 
 router = APIRouter(prefix="/notifications", tags=["notifications"])
 
@@ -36,6 +37,8 @@ async def my_notifications(
     db: AsyncSession = Depends(get_db),
 ):
     student_id = resolve_effective_student_id(user)
+    await purge_completed_plan_gap_notifications(db, student_id)
+    await db.commit()
     result = await db.execute(
         select(Notification)
         .where(Notification.student_id == student_id)

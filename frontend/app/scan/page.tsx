@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import jsQR from "jsqr";
 import StudentShell from "@/components/StudentShell";
+import { Ft } from "@/components/FuriganaText";
 import { attendanceApi } from "@/lib/api";
 import { useAuth } from "@/lib/useAuth";
 import { vibrate } from "@/lib/auth";
@@ -106,7 +107,11 @@ export default function ScanPage() {
   }
 
   if (loading || !user) {
-    return <div className="flex min-h-full items-center justify-center font-bold text-black">読み込み中...</div>;
+    return (
+      <div className="flex min-h-full items-center justify-center font-bold text-black">
+        <Ft>読み込み中...</Ft>
+      </div>
+    );
   }
 
   if (user.is_read_only) {
@@ -123,26 +128,26 @@ export default function ScanPage() {
               <video ref={videoRef} className="aspect-[3/4] w-full object-cover" playsInline muted />
               <canvas ref={canvasRef} className="hidden" />
               <p className="absolute bottom-4 left-0 right-0 text-center text-sm font-bold text-[var(--moon-yellow)]">
-                座席のQRコードを枠内に合わせてください
+                <Ft>座席のQRコードを枠内に合わせてください</Ft>
               </p>
             </>
           ) : (
             <div className="bg-white p-6">
-              <h2 className="text-xl font-bold text-black">確認</h2>
+              <h2 className="text-xl font-bold text-black"><Ft>確認</Ft></h2>
               <div className="mt-4 space-y-2 rounded-2xl bg-[var(--surface)] p-4">
                 <p className="text-black">
-                  <span className="font-bold">座席:</span> {scanResult.seat.seat_name}
+                  <span className="font-bold"><Ft>座席</Ft>:</span> {scanResult.seat.seat_name}
                 </p>
                 <p className="text-black">
-                  <span className="font-bold">名前:</span> {scanResult.student_name}
+                  <span className="font-bold"><Ft>名前</Ft>:</span> {scanResult.student_name}
                 </p>
                 <p className="text-sm font-medium text-black">
-                  {scanResult.mode === "check_in" ? "入室しますか？" : "退室しますか？"}
+                  {scanResult.mode === "check_in" ? <Ft>入室しますか？</Ft> : <Ft>退室しますか？</Ft>}
                 </p>
               </div>
               <div className="mt-6 flex gap-3">
                 <button type="button" onClick={() => router.push("/dashboard")} className="btn-secondary flex-1">
-                  キャンセル
+                  <Ft>キャンセル</Ft>
                 </button>
                 <button
                   type="button"
@@ -150,7 +155,13 @@ export default function ScanPage() {
                   disabled={processing}
                   className={`flex-1 ${scanResult.mode === "check_in" ? "btn-accent" : "btn-accent btn-warn"}`}
                 >
-                  {processing ? "処理中..." : scanResult.mode === "check_in" ? "入室する" : "退室する"}
+                  {processing ? (
+                    <Ft>処理中...</Ft>
+                  ) : scanResult.mode === "check_in" ? (
+                    <Ft>入室する</Ft>
+                  ) : (
+                    <Ft>退室する</Ft>
+                  )}
                 </button>
               </div>
             </div>

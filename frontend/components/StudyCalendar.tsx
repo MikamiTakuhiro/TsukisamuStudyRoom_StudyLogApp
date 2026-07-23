@@ -2,9 +2,31 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { CalendarWeek } from "@/lib/api";
+import { Ft } from "@/components/FuriganaText";
+import { useReading } from "@/context/ReadingContext";
 import { formatDateJa } from "@/lib/utils";
 
-const DAY_LABELS = ["日", "月", "火", "水", "木", "金", "土"];
+const DAY_LABELS = ["日", "月", "火", "水", "木", "金", "土"] as const;
+const DAY_READINGS: Record<(typeof DAY_LABELS)[number], string> = {
+  日: "にち",
+  月: "げつ",
+  火: "か",
+  水: "すい",
+  木: "もく",
+  金: "きん",
+  土: "ど",
+};
+
+function DayLabel({ label }: { label: (typeof DAY_LABELS)[number] }) {
+  const { showFurigana } = useReading();
+  if (!showFurigana) return <>{label}</>;
+  return (
+    <ruby className="furigana-ruby">
+      {label}
+      <rt>{DAY_READINGS[label]}</rt>
+    </ruby>
+  );
+}
 
 function parseDate(iso: string) {
   const [y, m, d] = iso.split("-").map(Number);
@@ -108,7 +130,7 @@ export default function StudyCalendar({
     <div
       className={`calendar-shell card relative z-0 flex min-h-0 flex-col ${fillHeight ? "mb-0 h-full flex-1" : "mb-6"}`}
     >
-      <h2 className="section-title mb-2 shrink-0 px-1">学習履歴カレンダー</h2>
+      <h2 className="section-title mb-2 shrink-0 px-1"><Ft>学習履歴カレンダー</Ft></h2>
 
       <div className={`calendar-chrome z-10 shrink-0 bg-white ${fillHeight ? "" : "sticky top-0"}`}>
         <div className="border-b border-[var(--border)] px-2 py-2.5">
@@ -120,7 +142,7 @@ export default function StudyCalendar({
         <div className="grid grid-cols-7 border-b border-[var(--border)] bg-white py-2">
           {DAY_LABELS.map((d) => (
             <span key={d} className="text-center text-[11px] font-bold text-[var(--navy)]">
-              {d}
+              <DayLabel label={d} />
             </span>
           ))}
         </div>
@@ -183,16 +205,16 @@ export default function StudyCalendar({
 
       <div className="mt-2 flex shrink-0 flex-wrap gap-2 border-t border-[var(--border)] px-1 pt-2 text-xs font-bold text-black">
         <span className="inline-flex items-center gap-1">
-          <span className="inline-block h-4 w-4 rounded border border-[var(--navy)] bg-[var(--moon-yellow)]" /> 塾
+          <span className="inline-block h-4 w-4 rounded border border-[var(--navy)] bg-[var(--moon-yellow)]" /> <Ft>塾</Ft>
         </span>
         <span className="inline-flex items-center gap-1">
-          <span className="inline-block h-4 w-4 rounded bg-[var(--navy)]" /> 家
+          <span className="inline-block h-4 w-4 rounded bg-[var(--navy)]" /> <Ft>家</Ft>
         </span>
         <span className="inline-flex items-center gap-1">
-          <span className="inline-block h-4 w-4 rounded border border-[var(--navy)] calendar-stripe" /> 塾+家
+          <span className="inline-block h-4 w-4 rounded border border-[var(--navy)] calendar-stripe" /> <Ft>塾+家</Ft>
         </span>
         <span className="inline-flex items-center gap-1">
-          <span className="inline-block h-2 w-2 rounded-full bg-red-500" /> 目標
+          <span className="inline-block h-2 w-2 rounded-full bg-red-500" /> <Ft>目標</Ft>
         </span>
       </div>
     </div>
