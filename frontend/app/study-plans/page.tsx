@@ -3,9 +3,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import StudentShell from "@/components/StudentShell";
 import { Input, Label, Select, EmptyState } from "@/components/ui/Input";
-import { academicApi, SUBJECTS, ACHIEVEMENT_LEVELS, type StudyPlan } from "@/lib/api";
+import { academicApi, ACHIEVEMENT_LEVELS, type StudyPlan } from "@/lib/api";
 import { useAuth } from "@/lib/useAuth";
-import { displayValue, formatDateJa } from "@/lib/utils";
+import { displayValue } from "@/lib/utils";
+import { Ft, FuriganaSubject, FormatDateJa } from "@/components/FuriganaText";
+import { getSubjects, displaySubject, storageSubject } from "@/lib/subjects";
 
 const SLIDE_MS = 350;
 
@@ -42,7 +44,7 @@ const defaultProgressForm = (targetDate = "") => ({
 export default function StudyPlansPage() {
   const { user, loading } = useAuth();
   const [plans, setPlans] = useState<StudyPlan[]>([]);
-  const [form, setForm] = useState({ subject: SUBJECTS[0], unit: "", target_completion_date: "" });
+  const [form, setForm] = useState({ subject: "国語", unit: "", target_completion_date: "" });
   const [progressPlanId, setProgressPlanId] = useState<number | null>(null);
   const [panelOpen, setPanelOpen] = useState(false);
   const [progressForm, setProgressForm] = useState(defaultProgressForm());
@@ -50,7 +52,13 @@ export default function StudyPlansPage() {
   const scrolledRef = useRef(false);
   const openedProgressRef = useRef(false);
   const isReadOnly = user?.is_read_only ?? false;
+  const subjects = useMemo(() => (user ? getSubjects(user.grade) : []), [user]);
   const sortedPlans = useMemo(() => sortPlans(plans), [plans]);
+
+  useEffect(() => {
+    if (!user || subjects.length === 0) return;
+    setForm((f) => ({ ...f, subject: subjects[0] }));
+  }, [user, subjects]);
 
   async function reload() {
     setPlans(await academicApi.studyPlans());
@@ -108,7 +116,13 @@ export default function StudyPlansPage() {
     const focusUnit = params.get("unit");
     if (!focusSubject || !focusUnit) return;
 
-    const match = plans.find((p) => p.subject === focusSubject && p.unit === focusUnit);
+    const match = plans.find(
+      (p) =>
+        p.unit === focusUnit &&
+        (p.subject === focusSubject ||
+          (focusSubject === "算数" && p.subject === "数学") ||
+          (focusSubject === "数学" && p.subject === "算数")),
+    );
     if (!match) return;
 
     scrolledRef.current = true;
@@ -148,26 +162,35 @@ export default function StudyPlansPage() {
     };
   }, [progressPlanId, closeProgress]);
 
-  if (loading || !user) return <div className="p-8 font-bold text-black">読み込み中...</div>;
+  if (loading || !user) {
+    return (
+      <div className="p-8 font-bold text-black">
+        <Ft>読み込み中...</Ft>
+      </div>
+    );
+  }
 
   return (
     <StudentShell title="学習計画" user={user}>
       <div className="app-shell w-full space-y-4 px-4 py-4 pb-12">
         {!isReadOnly && (
           <section className="card">
-            <h2 className="section-title mb-3">学習計画を追加</h2>
+            <h2 className="section-title mb-3"><Ft>学習計画を追加</Ft></h2>
             <form
               className="space-y-3"
               onSubmit={async (e) => {
                 e.preventDefault();
-                await academicApi.createStudyPlan(form);
-                setForm({ subject: SUBJECTS[0], unit: "", target_completion_date: "" });
+                await academicApi.createStudyPlan({
+                  ...form,
+                  subject: storageSubject(form.subject, user.grade),
+                });
+                setForm({ subject: subjects[0], unit: "", target_completion_date: "" });
                 reload();
               }}
             >
               <Label>科目</Label>
               <Select value={form.subject} onChange={(e) => setForm({ ...form, subject: e.target.value })}>
-                {SUBJECTS.map((s) => (
+                {subjects.map((s) => (
                   <option key={s}>{s}</option>
                 ))}
               </Select>
@@ -175,13 +198,13 @@ export default function StudyPlansPage() {
               <Input value={form.unit} onChange={(e) => setForm({ ...form, unit: e.target.value })} required />
               <Label>目標完了日</Label>
               <Input type="date" value={form.target_completion_date} onChange={(e) => setForm({ ...form, target_completion_date: e.target.value })} required />
-              <button type="submit" className="btn-primary w-full">追加</button>
+              <button type="submit" className="btn-primary w-full"><Ft>追加</Ft></button>
             </form>
           </section>
         )}
 
         <section className="card">
-          <h2 className="section-title mb-3">計画一覧</h2>
+          <h2 className="section-title mb-3"><Ft>計画一覧</Ft></h2>
           {sortedPlans.length === 0 && <EmptyState />}
           {sortedPlans.map((p) => {
             const completed = isPlanCompleted(p);
@@ -194,21 +217,32 @@ export default function StudyPlansPage() {
                 className="mb-3 scroll-mt-24 rounded-xl bg-[var(--surface)] p-3"
               >
                 <div className="flex items-start justify-between gap-2">
-                  <p className="font-bold text-black">{displayValue(p.subject)} — {displayValue(p.unit)}</p>
+                  <p className="font-bold text-black">
+                    <FuriganaSubject subject={p.subject} grade={user.grade} /> — {displayValue(p.unit)}
+                  </p>
                   {completed && (
-                    <span className="badge-complete shrink-0">完了</span>
+                    <span className="badge-complete shrink-0"><Ft>完了</Ft></span>
                   )}
                 </div>
-                <p className="text-sm text-black">目標: {formatDateJa(p.target_completion_date)}</p>
+                <p className="text-sm text-black">
+                  <Ft>目標</Ft>: <FormatDateJa iso={p.target_completion_date} />
+                </p>
                 {completed && completionDate ? (
-                  <p className="text-sm text-black">完了日: {formatDateJa(completionDate)}</p>
+                  <p className="text-sm text-black">
+                    <Ft>完了日</Ft>: <FormatDateJa iso={completionDate} />
+                  </p>
                 ) : p.progress.length === 0 ? (
-                  <p className="text-sm text-black">進捗: 情報なし</p>
+                  <p className="text-sm text-black"><Ft>進捗: 情報なし</Ft></p>
                 ) : (
                   p.progress.map((pr) => (
                     <p key={pr.progress_id} className="text-sm text-black">
-                      {displayValue(pr.achievement_level)}
-                      {pr.completion_date ? ` / 完了日: ${formatDateJa(pr.completion_date)}` : ""}
+                      <Ft>{displayValue(pr.achievement_level)}</Ft>
+                      {pr.completion_date ? (
+                        <>
+                          {" / "}
+                          <Ft>完了日</Ft>: <FormatDateJa iso={pr.completion_date} />
+                        </>
+                      ) : null}
                     </p>
                   ))
                 )}
@@ -220,7 +254,7 @@ export default function StudyPlansPage() {
                       className="btn-secondary mt-2 w-full text-sm"
                       onClick={() => openProgress(p.plan_id, p.target_completion_date)}
                     >
-                      進捗を記録
+                      <Ft>進捗を記録</Ft>
                     </button>
                     {isMounted && (
                       <div
@@ -261,13 +295,13 @@ export default function StudyPlansPage() {
                             />
                             {progressForm.achievement_level === "完了" && (
                               <p className="text-xs font-medium text-black">
-                                「完了」を保存すると、今日の日付が完了日として自動記録されます。
+                                <Ft>「完了」を保存すると、今日の日付が完了日として自動記録されます。</Ft>
                               </p>
                             )}
                             <div className="flex gap-2">
-                              <button type="submit" className="btn-primary flex-1">保存</button>
+                              <button type="submit" className="btn-primary flex-1"><Ft>保存</Ft></button>
                               <button type="button" className="btn-secondary flex-1" onClick={closeProgress}>
-                                キャンセル
+                                <Ft>キャンセル</Ft>
                               </button>
                             </div>
                           </form>

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { Ft } from "@/components/FuriganaText";
 
 export default function AppHeader({
   title,
@@ -19,8 +20,8 @@ export default function AppHeader({
     <header className="sticky top-0 z-40 border-b-2 border-[var(--navy)] bg-white px-4 py-3">
       <div className="app-shell flex w-full items-center justify-between px-4">
         <div>
-          <p className="text-xs font-bold text-[var(--navy)]">月寒学習室</p>
-          <h1 className="text-lg font-bold text-black">{title}</h1>
+          <p className="text-xs font-bold text-[var(--navy)]"><Ft>月寒学習室</Ft></p>
+          <h1 className="text-lg font-bold text-black"><Ft>{title}</Ft></h1>
         </div>
         <div className="flex items-center gap-2">
           {role === "admin" && !showMenu && (
@@ -47,7 +48,7 @@ export default function AppHeader({
       </div>
       {isReadOnly && (
         <p className="app-shell mt-1 w-full px-4 text-center text-xs font-bold text-[var(--navy)]">
-          保護者モード（閲覧専用）
+          <Ft>保護者モード（閲覧専用）</Ft>
         </p>
       )}
     </header>

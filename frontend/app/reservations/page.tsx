@@ -1,14 +1,44 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import StudentShell from "@/components/StudentShell";
 import { Input, Label, EmptyState } from "@/components/ui/Input";
+import { Ft, FormatDateJa } from "@/components/FuriganaText";
 import { reservationsApi, type DayAvailability, type ReservationItem } from "@/lib/api";
+import { hasFullSlotInRange, isValidTimeRange, slotsInRange } from "@/lib/reservationSlots";
 import { useAuth } from "@/lib/useAuth";
-import { formatDateJa, formatTimeJa } from "@/lib/utils";
+import { formatTimeJa } from "@/lib/utils";
 
 function todayIso() {
   return new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Tokyo" });
+}
+
+function SlotStatusCard({ slot }: { slot: DayAvailability["slots"][number] }) {
+  return (
+    <div
+      className={`rounded-xl border-2 p-3 ${
+        slot.is_full
+          ? "border-red-300 bg-red-50"
+          : slot.available_seats <= 1
+            ? "border-orange-300 bg-orange-50"
+            : "border-green-300 bg-green-50"
+      }`}
+    >
+      <p className="font-bold text-black">
+        {slot.start_time}〜{slot.end_time}
+      </p>
+      <p className="mt-1 text-sm font-medium text-black">
+        {slot.is_full ? (
+          <span className="text-red-700"><Ft>満席</Ft></span>
+        ) : (
+          <>
+            <Ft>空き</Ft> <span className="font-bold text-green-700">{slot.available_seats}</span> / {slot.total_seats}{" "}
+            <Ft>席</Ft>
+          </>
+        )}
+      </p>
+    </div>
+  );
 }
 
 export default function ReservationsPage() {
@@ -17,7 +47,7 @@ export default function ReservationsPage() {
   const [availability, setAvailability] = useState<DayAvailability | null>(null);
   const [myReservations, setMyReservations] = useState<ReservationItem[]>([]);
   const [startTime, setStartTime] = useState("18:00");
-  const [endTime, setEndTime] = useState("20:00");
+  const [endTime, setEndTime] = useState("21:00");
   const [submitting, setSubmitting] = useState(false);
 
   const isReadOnly = user?.is_read_only ?? false;
@@ -36,8 +66,25 @@ export default function ReservationsPage() {
     reload().catch(console.error);
   }, [user, reload]);
 
+  const selectedSlots = useMemo(() => {
+    if (!availability) return [];
+    return slotsInRange(availability.slots, startTime, endTime);
+  }, [availability, startTime, endTime]);
+
+  const timeRangeValid = isValidTimeRange(startTime, endTime);
+  const hasFullSlot = availability ? hasFullSlotInRange(availability.slots, startTime, endTime) : false;
+  const canReserve =
+    !isReadOnly &&
+    availability &&
+    availability.total_seats > 0 &&
+    timeRangeValid &&
+    !hasFullSlot &&
+    !submitting;
+  const showSelectedAvailability = !!availability && timeRangeValid;
+
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
+    if (!canReserve) return;
     setSubmitting(true);
     try {
       await reservationsApi.create({
@@ -54,84 +101,123 @@ export default function ReservationsPage() {
   }
 
   if (loading || !user) {
-    return <div className="p-8 font-bold text-black">読み込み中...</div>;
+    return (
+      <div className="p-8 font-bold text-black">
+        <Ft>読み込み中...</Ft>
+      </div>
+    );
   }
 
   return (
     <StudentShell title="来塾予約" user={user}>
       <div className="app-shell w-full space-y-4 px-4 py-4 pb-12">
-        <section className="card">
-          <h2 className="section-title mb-3">日付を選ぶ</h2>
-          <Input
-            type="date"
-            value={selectedDate}
-            min={todayIso()}
-            onChange={(e) => setSelectedDate(e.target.value)}
-          />
-        </section>
-
-        {availability && (
-          <section className="card">
-            <h2 className="section-title mb-3">
-              {formatDateJa(selectedDate)} の空き状況（18:00〜22:00・30分単位 / 座席 {availability.total_seats} 席）
-            </h2>
-            {availability.total_seats === 0 ? (
-              <p className="text-sm font-medium text-black">座席が登録されていません。</p>
-            ) : (
-              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                {availability.slots.map((slot) => (
-                  <div
-                    key={`${slot.start_time}-${slot.end_time}`}
-                    className={`rounded-xl border-2 p-3 ${
-                      slot.is_full
-                        ? "border-red-300 bg-red-50"
-                        : slot.available_seats <= 1
-                          ? "border-orange-300 bg-orange-50"
-                          : "border-green-300 bg-green-50"
-                    }`}
-                  >
-                    <p className="font-bold text-black">
-                      {slot.start_time}〜{slot.end_time}
-                    </p>
-                    <p className="mt-1 text-sm font-medium text-black">
-                      {slot.is_full ? (
-                        <span className="text-red-700">満席</span>
-                      ) : (
-                        <>
-                          空き <span className="font-bold text-green-700">{slot.available_seats}</span> / {slot.total_seats} 席
-                        </>
-                      )}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            )}
-          </section>
-        )}
-
         {!isReadOnly && (
           <section className="card">
-            <h2 className="section-title mb-3">予約を登録</h2>
-            <form onSubmit={handleCreate} className="space-y-3">
+            <h2 className="section-title mb-3"><Ft>予約を登録</Ft></h2>
+            <form onSubmit={handleCreate} className="space-y-4">
+              <div>
+                <Label htmlFor="reservation-date">日付</Label>
+                <Input
+                  id="reservation-date"
+                  type="date"
+                  value={selectedDate}
+                  min={todayIso()}
+                  onChange={(e) => setSelectedDate(e.target.value)}
+                  required
+                />
+              </div>
+
               <div className="grid gap-3 sm:grid-cols-2">
                 <div>
-                  <Label>来室予定</Label>
-                  <Input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} required />
+                  <Label htmlFor="reservation-start">来室予定</Label>
+                  <Input
+                    id="reservation-start"
+                    type="time"
+                    value={startTime}
+                    onChange={(e) => setStartTime(e.target.value)}
+                    required
+                  />
                 </div>
                 <div>
-                  <Label>退室予定</Label>
-                  <Input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} required />
+                  <Label htmlFor="reservation-end">退室予定</Label>
+                  <Input
+                    id="reservation-end"
+                    type="time"
+                    value={endTime}
+                    onChange={(e) => setEndTime(e.target.value)}
+                    required
+                  />
                 </div>
               </div>
-              <button type="submit" disabled={submitting} className="btn-primary w-full disabled:opacity-50">
-                {submitting ? "予約中..." : "予約する"}
+
+              {!timeRangeValid && (
+                <p className="text-sm font-bold text-red-700">
+                  <Ft>退室予定は来室予定より後にしてください。</Ft>
+                </p>
+              )}
+
+              <button type="submit" disabled={!canReserve} className="btn-primary w-full disabled:opacity-50">
+                {submitting ? (
+                  <Ft>予約中...</Ft>
+                ) : hasFullSlot ? (
+                  <Ft>予約状況を確認してください</Ft>
+                ) : !timeRangeValid ? (
+                  <Ft>時間を確認してください</Ft>
+                ) : (
+                  <Ft>予約する</Ft>
+                )}
               </button>
+
+              {showSelectedAvailability && (
+                <div className="space-y-3 rounded-2xl border-2 border-[var(--border)] bg-[var(--surface)] p-4">
+                  <h3 className="text-sm font-bold text-[var(--navy)]">
+                    <FormatDateJa iso={selectedDate} /> {startTime}〜{endTime}{" "}
+                    <Ft>の空き状況（30分単位 / 座席</Ft> {availability.total_seats} <Ft>席）</Ft>
+                  </h3>
+
+                  {availability.total_seats === 0 ? (
+                    <p className="text-sm font-medium text-black">
+                      <Ft>座席が登録されていません。</Ft>
+                    </p>
+                  ) : selectedSlots.length === 0 ? (
+                    <p className="text-sm font-medium text-black">
+                      <Ft>この時間帯の空き状況を表示できません。18:00〜22:00の範囲で選んでください。</Ft>
+                    </p>
+                  ) : (
+                    <div className="grid gap-2">
+                      {selectedSlots.map((slot) => (
+                        <SlotStatusCard key={`${slot.start_time}-${slot.end_time}`} slot={slot} />
+                      ))}
+                    </div>
+                  )}
+
+                  {hasFullSlot && (
+                    <p className="text-sm font-bold text-red-700">
+                      <Ft>選択した時間帯に満席の30分枠があります。時間を変更するか、空き状況を確認してください。</Ft>
+                    </p>
+                  )}
+                </div>
+              )}
             </form>
           </section>
         )}
 
+        {isReadOnly && (
+          <section className="card">
+            <h2 className="section-title mb-3"><Ft>日付を選ぶ</Ft></h2>
+            <Input
+              type="date"
+              value={selectedDate}
+              min={todayIso()}
+              onChange={(e) => setSelectedDate(e.target.value)}
+            />
+          </section>
+        )}
+
         <section className="card">
-          <h2 className="section-title mb-3">{isReadOnly ? "予約一覧" : "自分の予約"}</h2>
+          <h2 className="section-title mb-3">
+            {isReadOnly ? <Ft>予約一覧</Ft> : <Ft>自分の予約</Ft>}
+          </h2>
           {myReservations.length === 0 ? (
             <EmptyState message="予約がありません" />
           ) : (
@@ -142,7 +228,9 @@ export default function ReservationsPage() {
                   className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3"
                 >
                   <div>
-                    <p className="font-bold text-black">{formatDateJa(r.start_time)}</p>
+                    <p className="font-bold text-black">
+                      <FormatDateJa iso={r.start_time} />
+                    </p>
                     <p className="text-sm font-medium text-black">
                       {formatTimeJa(r.start_time)}〜{formatTimeJa(r.end_time)}
                     </p>
@@ -157,7 +245,7 @@ export default function ReservationsPage() {
                         reload();
                       }}
                     >
-                      キャンセル
+                      <Ft>キャンセル</Ft>
                     </button>
                   )}
                 </li>

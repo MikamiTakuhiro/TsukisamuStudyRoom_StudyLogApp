@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import StudentShell from "@/components/StudentShell";
+import { Ft } from "@/components/FuriganaText";
 import { attendanceApi, type ActiveSeatStatus } from "@/lib/api";
 import { useAuth } from "@/lib/useAuth";
 import { formatTimeJa } from "@/lib/utils";
@@ -30,7 +31,11 @@ export default function LiveAttendancePage() {
   }, [user, reload]);
 
   if (loading || !user) {
-    return <div className="p-8 font-bold text-black">読み込み中...</div>;
+    return (
+      <div className="p-8 font-bold text-black">
+        <Ft>読み込み中...</Ft>
+      </div>
+    );
   }
 
   const occupied = live.filter((s) => s.student_name).length;
@@ -41,13 +46,13 @@ export default function LiveAttendancePage() {
         <section className="card">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
             <div>
-              <h2 className="section-title">現在の座席状況</h2>
+              <h2 className="section-title"><Ft>現在の座席状況</Ft></h2>
               <p className="mt-1 text-sm font-medium text-black">
-                使用中 {occupied} / {live.length} 席
+                <Ft>使用中</Ft> {occupied} / {live.length} <Ft>席</Ft>
               </p>
             </div>
             <button type="button" onClick={reload} disabled={refreshing} className="btn-secondary text-sm">
-              {refreshing ? "更新中..." : "更新"}
+              {refreshing ? <Ft>更新中...</Ft> : <Ft>更新</Ft>}
             </button>
           </div>
           <div className="grid gap-2 sm:grid-cols-2">
@@ -68,13 +73,17 @@ export default function LiveAttendancePage() {
                       )}
                     </>
                   ) : (
-                    "空席"
+                    <Ft>空席</Ft>
                   )}
                 </p>
               </div>
             ))}
           </div>
-          {live.length === 0 && <p className="font-medium text-black">座席が登録されていません。</p>}
+          {live.length === 0 && (
+            <p className="font-medium text-black">
+              <Ft>座席が登録されていません。</Ft>
+            </p>
+          )}
         </section>
       </div>
     </StudentShell>

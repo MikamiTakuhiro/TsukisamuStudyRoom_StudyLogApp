@@ -31,6 +31,7 @@ from app.schemas import (
     StudyPlanUpdate,
 )
 from app.services.auth_service import resolve_effective_student_id
+from app.services.notification_service import clear_plan_gap_notifications
 from app.timezone_utils import today_app
 
 router = APIRouter(prefix="/academic", tags=["academic"])
@@ -291,6 +292,8 @@ async def create_progress(
     if body.target_completion_date is not None:
         plan.target_completion_date = body.target_completion_date
     db.add(pt)
+    if completion_date is not None:
+        await clear_plan_gap_notifications(db, plan.student_id, plan.subject, plan.unit)
     await db.commit()
     await db.refresh(pt)
     return pt
@@ -320,6 +323,10 @@ async def update_progress(
         pt.completion_date = body.completion_date
     if body.achievement_level is not None:
         pt.achievement_level = body.achievement_level
+        if body.achievement_level == "完了" and pt.completion_date is None:
+            pt.completion_date = today_app()
+    if pt.completion_date is not None:
+        await clear_plan_gap_notifications(db, plan.student_id, plan.subject, plan.unit)
     await db.commit()
     await db.refresh(pt)
     return pt
