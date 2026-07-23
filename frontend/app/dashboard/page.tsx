@@ -45,6 +45,12 @@ export default function DashboardPage() {
     reloadNotifications().catch(console.error);
   }, [user]);
 
+  function closeStudyModal() {
+    setShowStudyModal(false);
+    setSelectedSubject(null);
+    setUnitInput("");
+  }
+
   async function postStudy(subject: string, unit: string) {
     setSubmitting(true);
     try {
@@ -213,8 +219,14 @@ export default function DashboardPage() {
       )}
 
       {showStudyModal && (
-        <div className="modal-overlay items-end sm:items-center sm:justify-center">
-          <div className="modal-panel w-full rounded-t-3xl bg-white p-6 sm:rounded-3xl">
+        <div
+          className="modal-overlay items-end sm:items-center sm:justify-center"
+          onClick={closeStudyModal}
+        >
+          <div
+            className="modal-panel w-full rounded-t-3xl bg-white p-6 sm:rounded-3xl"
+            onClick={(e) => e.stopPropagation()}
+          >
             <h3 className="mb-4 text-lg font-bold text-black"><Ft>今から勉強する内容</Ft></h3>
             {!selectedSubject ? (
               <div className="grid grid-cols-2 gap-3">
@@ -260,15 +272,7 @@ export default function DashboardPage() {
                 </button>
               </div>
             )}
-            <button
-              type="button"
-              onClick={() => {
-                setShowStudyModal(false);
-                setSelectedSubject(null);
-                setUnitInput("");
-              }}
-              className="btn-secondary mt-4 w-full"
-            >
+            <button type="button" onClick={closeStudyModal} className="btn-secondary mt-4 w-full">
               <Ft>キャンセル</Ft>
             </button>
           </div>
