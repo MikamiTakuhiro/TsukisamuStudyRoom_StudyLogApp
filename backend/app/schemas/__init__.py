@@ -144,6 +144,12 @@ class NotificationResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class AdminNotificationResponse(NotificationResponse):
+    student_id: int
+    student_name: str
+    user_id: str
+
+
 class NotificationUpdateRequest(BaseModel):
     content: str | None = None
 

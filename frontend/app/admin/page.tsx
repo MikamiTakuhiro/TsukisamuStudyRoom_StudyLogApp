@@ -3,18 +3,32 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import AdminShell from "@/components/AdminShell";
+import { FormatDateTimeJa } from "@/components/FuriganaText";
+import NotificationRow, { notificationTypeLabel } from "@/components/NotificationRow";
 import { Input, Select, Textarea } from "@/components/ui/Input";
-import { adminApi, attendanceApi, type NotificationItem, type User, type ActiveSeatStatus } from "@/lib/api";
+import {
+  adminApi,
+  attendanceApi,
+  type AdminNotificationItem,
+  type User,
+  type ActiveSeatStatus,
+} from "@/lib/api";
 import { GRADE_OPTIONS, gradeLabel } from "@/lib/grades";
 import { useRequireAdmin } from "@/lib/useRequireAdmin";
 import { buildAccountInfoText, downloadTextFile } from "@/lib/utils";
+
+type NotificationPreviewItem = AdminNotificationItem & {
+  recipients: { student_id: number; student_name: string; user_id: string }[];
+};
 
 export default function AdminPage() {
   const { ready } = useRequireAdmin();
   const [students, setStudents] = useState<User[]>([]);
   const [seats, setSeats] = useState<{ seat_id: number; seat_name: string; qr_code_data: string }[]>([]);
   const [live, setLive] = useState<ActiveSeatStatus[]>([]);
-  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+  const [notifications, setNotifications] = useState<AdminNotificationItem[]>([]);
+  const [openMenuId, setOpenMenuId] = useState<number | null>(null);
+  const [detailNotification, setDetailNotification] = useState<NotificationPreviewItem | null>(null);
   const [form, setForm] = useState({ last_name: "", first_name: "", grade: 7, gender: "未回答" });
   const [seatName, setSeatName] = useState("");
   const [broadcastMessage, setBroadcastMessage] = useState("");
@@ -101,6 +115,49 @@ export default function AdminPage() {
     if (!window.confirm(`座席「${name}」を削除しますか？`)) return;
     await adminApi.deleteSeat(seatId);
     refresh();
+  }
+
+  /** 全体お知らせは生徒ごとに同一内容で複製されるため、プレビューでは1件にまとめる */
+  function buildNotificationPreview(items: AdminNotificationItem[]): NotificationPreviewItem[] {
+    const preview: NotificationPreviewItem[] = [];
+    const broadcastIndex = new Map<string, number>();
+
+    for (const n of items) {
+      const recipient = {
+        student_id: n.student_id,
+        student_name: n.student_name,
+        user_id: n.user_id,
+      };
+      if (n.notification_type === "broadcast") {
+        const sentKey = n.sent_at.slice(0, 19);
+        const key = `${n.content}\0${sentKey}`;
+        const existing = broadcastIndex.get(key);
+        if (existing !== undefined) {
+          preview[existing].recipients.push(recipient);
+          continue;
+        }
+        broadcastIndex.set(key, preview.length);
+        preview.push({ ...n, recipients: [recipient] });
+      } else {
+        preview.push({ ...n, recipients: [recipient] });
+      }
+    }
+    return preview.slice(0, 10);
+  }
+
+  async function removeNotification(n: NotificationPreviewItem) {
+    const isBroadcast = n.notification_type === "broadcast";
+    const message = isBroadcast
+      ? "このお知らせを全生徒の通知から削除しますか？"
+      : "この通知を削除しますか？";
+    if (!window.confirm(message)) return;
+    try {
+      await adminApi.deleteNotification(n.notification_id);
+      setDetailNotification(null);
+      await refresh();
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "削除に失敗しました");
+    }
   }
 
   if (!ready) {
@@ -355,27 +412,95 @@ export default function AdminPage() {
           {broadcastResult && (
             <p className="mt-3 rounded-xl bg-green-50 p-3 text-sm font-bold text-green-800">{broadcastResult}</p>
           )}
-          <div className="mt-4 border-t border-[var(--border)] pt-4">
+          <div className={`mt-4 border-t border-[var(--border)] pt-4 ${openMenuId ? "relative z-30 overflow-visible" : ""}`}>
             <h3 className="mb-2 text-sm font-bold text-[var(--navy)]">最近の通知プレビュー</h3>
+            <p className="mb-3 text-xs font-medium text-black">
+              全体お知らせと学習計画リマインドなど、直近の通知を確認できます。お知らせは送信バッチごとに1件表示します。
+            </p>
             {notifications.length === 0 && <p className="font-medium text-black">情報なし</p>}
-            {notifications.slice(0, 10).map((n) => (
-              <div
-                key={n.notification_id}
-                className={`mb-2 rounded-xl p-3 text-sm font-medium text-black ${
-                  n.notification_type === "broadcast" ? "bg-orange-50 border border-orange-300" : "bg-[var(--surface)]"
-                }`}
-              >
-                {n.notification_type === "broadcast" && (
-                  <span className="mr-2 rounded bg-orange-500 px-1.5 py-0.5 text-[10px] font-bold text-white">
-                    お知らせ
-                  </span>
-                )}
-                {n.content}
-              </div>
+            {buildNotificationPreview(notifications).map((n) => (
+              <NotificationRow
+                key={
+                  n.notification_type === "broadcast"
+                    ? `broadcast-${n.content}-${n.sent_at.slice(0, 19)}`
+                    : n.notification_id
+                }
+                notification={n}
+                menuOpen={openMenuId === n.notification_id}
+                isReadOnly={false}
+                onMenuToggle={() =>
+                  setOpenMenuId((prev) => (prev === n.notification_id ? null : n.notification_id))
+                }
+                onMenuClose={() => setOpenMenuId(null)}
+                onDetail={() => {
+                  setOpenMenuId(null);
+                  setDetailNotification(n);
+                }}
+                onDelete={async () => {
+                  setOpenMenuId(null);
+                  await removeNotification(n);
+                }}
+              />
             ))}
           </div>
         </section>
       </div>
+
+      {detailNotification && (
+        <div className="modal-overlay items-end sm:items-center sm:justify-center">
+          <div className="modal-panel w-full rounded-t-3xl bg-white p-6 sm:max-w-md sm:rounded-3xl">
+            <h3 className="text-lg font-bold text-black">通知の詳細</h3>
+            <dl className="mt-4 space-y-3 text-sm text-black">
+              <div>
+                <dt className="font-bold text-[var(--navy)]">種類</dt>
+                <dd className="mt-1">{notificationTypeLabel(detailNotification.notification_type)}</dd>
+              </div>
+              <div>
+                <dt className="font-bold text-[var(--navy)]">宛先</dt>
+                <dd className="mt-1">
+                  {detailNotification.notification_type === "broadcast" ? (
+                    <div className="space-y-1">
+                      <p className="font-medium">全生徒（{detailNotification.recipients.length}名）</p>
+                      <ul className="max-h-40 space-y-1 overflow-y-auto rounded-xl bg-[var(--surface)] p-3">
+                        {detailNotification.recipients.map((r) => (
+                          <li key={r.student_id}>
+                            {r.student_name}
+                            <span className="ml-2 text-xs text-black/70">({r.user_id})</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : (
+                    <p>
+                      {detailNotification.recipients[0]?.student_name}
+                      <span className="ml-2 text-xs text-black/70">
+                        ({detailNotification.recipients[0]?.user_id})
+                      </span>
+                    </p>
+                  )}
+                </dd>
+              </div>
+              <div>
+                <dt className="font-bold text-[var(--navy)]">内容</dt>
+                <dd className="mt-1 whitespace-pre-wrap">{detailNotification.content}</dd>
+              </div>
+              <div>
+                <dt className="font-bold text-[var(--navy)]">送信日時</dt>
+                <dd className="mt-1">
+                  <FormatDateTimeJa iso={detailNotification.sent_at} />
+                </dd>
+              </div>
+            </dl>
+            <button
+              type="button"
+              onClick={() => setDetailNotification(null)}
+              className="btn-secondary mt-6 w-full"
+            >
+              閉じる
+            </button>
+          </div>
+        </div>
+      )}
     </AdminShell>
   );
 }
