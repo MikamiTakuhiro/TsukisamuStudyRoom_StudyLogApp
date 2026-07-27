@@ -51,6 +51,12 @@ export type NotificationItem = {
   trigger_gap_detected: boolean;
 };
 
+export type AdminNotificationItem = NotificationItem & {
+  student_id: number;
+  student_name: string;
+  user_id: string;
+};
+
 export type TimelineDay = {
   date: string;
   attendances: {
@@ -358,7 +364,11 @@ export const adminApi = {
   seats: () => apiFetch<{ seat_id: number; seat_name: string; qr_code_data: string }[]>("/api/admin/seats"),
   createSeat: (seat_name: string) =>
     apiFetch("/api/admin/seats", { method: "POST", body: JSON.stringify({ seat_name }) }),
-  notifications: () => apiFetch<NotificationItem[]>("/api/admin/notifications"),
+  notifications: () => apiFetch<AdminNotificationItem[]>("/api/admin/notifications"),
+  deleteNotification: (id: number) =>
+    apiFetch<{ ok: boolean; deleted_count: number }>(`/api/admin/notifications/${id}`, {
+      method: "DELETE",
+    }),
   broadcastNotification: (content: string) =>
     apiFetch<{ sent_count: number }>("/api/admin/notifications/broadcast", {
       method: "POST",

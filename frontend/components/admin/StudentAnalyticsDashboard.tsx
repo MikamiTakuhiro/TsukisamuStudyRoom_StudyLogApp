@@ -12,6 +12,7 @@ import {
 } from "@/components/admin/AnalyticsCharts";
 import {
   aspirationInsight,
+  attendanceStaySummary,
   dailyStudyMinutes,
   dailyStudyRecordCounts,
   examScoreTrend,
@@ -49,6 +50,7 @@ export default function StudentAnalyticsDashboard({ profile }: { profile: Studen
   const weekAvg = weeklyAverageMinutes(profile);
   const monthAvg = monthlyAverageMinutes(profile);
   const monthVisits = monthlyVisitCounts(profile);
+  const stay = attendanceStaySummary(profile);
   const visitNumberById = buildVisitNumberMap(profile);
   const historyRows = buildStudentHistoryRows(profile);
 
@@ -56,8 +58,27 @@ export default function StudentAnalyticsDashboard({ profile }: { profile: Studen
     <div className="space-y-4">
       <div id="analytics-kpi" data-analytics-anchor className="space-y-3">
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <AnalyticsKpi label="累計来塾回数" value={`${stay.totalVisits}回`} />
+          <AnalyticsKpi label="累計滞在時間" value={formatMinutes(stay.totalMinutes)} sub="入室中も含む" />
+          <AnalyticsKpi
+            label="1回あたり平均滞在"
+            value={formatMinutes(stay.averageMinutes)}
+            sub="累計"
+          />
+          <AnalyticsKpi
+            label="今月の来塾"
+            value={`${stay.thisMonthVisits}回`}
+            sub={formatMinutes(stay.thisMonthMinutes)}
+          />
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <AnalyticsKpi
+            label="今年の来塾"
+            value={`${stay.thisYearVisits}回`}
+            sub={formatMinutes(stay.thisYearMinutes)}
+          />
           <AnalyticsKpi label="学習記録数" value={`${profile.study_records.length}件`} sub="累計" />
-          <AnalyticsKpi label="来室回数" value={`${profile.attendances.length}回`} sub="累計" />
           <AnalyticsKpi label="週平均滞在" value={formatMinutes(weekAvg)} sub="退室済みのみ" />
           <AnalyticsKpi label="月平均滞在" value={formatMinutes(monthAvg)} sub="退室済みのみ" />
         </div>

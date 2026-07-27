@@ -1,5 +1,7 @@
+from datetime import datetime, timedelta, timezone
+
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
@@ -15,7 +17,7 @@ from app.schemas import (
     ExamResultFullResponse,
     ExamResultResponse,
     BroadcastNotificationRequest,
-    NotificationResponse,
+    AdminNotificationResponse,
     SeatCreateRequest,
     SeatResponse,
     SeatUpdateRequest,
@@ -323,15 +325,66 @@ async def delete_seat(
     return {"ok": True}
 
 
-@router.get("/notifications", response_model=list[NotificationResponse])
+@router.get("/notifications", response_model=list[AdminNotificationResponse])
 async def list_notifications(
     _: Student = Depends(require_admin),
     db: AsyncSession = Depends(get_db),
 ):
     result = await db.execute(
-        select(Notification).order_by(Notification.sent_at.desc()).limit(100)
+        select(Notification, Student)
+        .join(Student, Student.student_id == Notification.student_id)
+        .order_by(Notification.sent_at.desc())
+        .limit(100)
     )
-    return list(result.scalars())
+    rows = result.all()
+    return [
+        AdminNotificationResponse(
+            notification_id=n.notification_id,
+            notification_type=n.notification_type,
+            content=n.content,
+            is_read=n.is_read,
+            sent_at=n.sent_at,
+            trigger_gap_detected=n.trigger_gap_detected,
+            student_id=s.student_id,
+            student_name=s.name,
+            user_id=s.user_id,
+        )
+        for n, s in rows
+    ]
+
+
+@router.delete("/notifications/{notification_id}")
+async def delete_admin_notification(
+    notification_id: int,
+    _: Student = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(
+        select(Notification).where(Notification.notification_id == notification_id)
+    )
+    row = result.scalar_one_or_none()
+    if not row:
+        raise HTTPException(status_code=404, detail="通知が見つかりません")
+
+    deleted_count = 1
+    if row.notification_type == "broadcast":
+        # 全体お知らせは生徒ごとに同一内容で複製されるため、同バッチを一括削除
+        # 送信時刻の微小差を吸収するため秒単位で揃えて照合する
+        sent_second = row.sent_at.replace(microsecond=0)
+        del_result = await db.execute(
+            delete(Notification).where(
+                Notification.notification_type == "broadcast",
+                Notification.content == row.content,
+                Notification.sent_at >= sent_second,
+                Notification.sent_at < sent_second + timedelta(seconds=1),
+            )
+        )
+        deleted_count = del_result.rowcount or 0
+    else:
+        await db.delete(row)
+
+    await db.commit()
+    return {"ok": True, "deleted_count": deleted_count}
 
 
 @router.post("/notifications/broadcast")
@@ -349,6 +402,7 @@ async def broadcast_notification(
     if not students:
         return {"sent_count": 0}
 
+    sent_at = datetime.now(timezone.utc)
     for student in students:
         db.add(
             Notification(
@@ -356,6 +410,7 @@ async def broadcast_notification(
                 notification_type="broadcast",
                 content=content,
                 trigger_gap_detected=False,
+                sent_at=sent_at,
             )
         )
     await db.commit()

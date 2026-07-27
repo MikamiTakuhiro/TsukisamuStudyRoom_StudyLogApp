@@ -1,5 +1,5 @@
 import type { StudentFullProfile } from "@/lib/api";
-import { dedupeLatestPerDate } from "@/lib/aspirations";
+import { dedupeLatestPerDate, sortAspirations } from "@/lib/aspirations";
 
 export type DailyCount = { date: string; count: number };
 export type LabeledValue = { label: string; value: number; color?: string };
@@ -122,7 +122,8 @@ export function topSeatInsight(profile: StudentFullProfile): string {
 export function aspirationInsight(profile: StudentFullProfile): string {
   const items = dedupeLatestPerDate(profile.aspirations);
   if (items.length === 0) return "志望校の登録がまだありません。";
-  const first = items.find((a) => a.priority_rank === 1);
+  // 最新の記録日の第一志望を採用する
+  const first = sortAspirations(items).find((a) => a.priority_rank === 1);
   if (!first) return "第一志望の記録がありません。";
   return `現在の第一志望は「${first.target_school}」（${first.date_recorded} 記録）です。`;
 }
@@ -210,4 +211,74 @@ export function monthlyVisitCounts(profile: StudentFullProfile): DailyCount[] {
   return [...map.entries()]
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([date, count]) => ({ date: `${date}-01`, count }));
+}
+
+const APP_TIMEZONE = "Asia/Tokyo";
+
+function dateKeyInAppTz(iso: string | Date): string {
+  return new Intl.DateTimeFormat("sv-SE", {
+    timeZone: APP_TIMEZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(typeof iso === "string" ? new Date(iso) : iso);
+}
+
+function visitDurationMinutes(
+  checkInTime: string,
+  checkOutTime: string | null,
+  nowMs: number = Date.now(),
+): number {
+  const endMs = checkOutTime ? new Date(checkOutTime).getTime() : nowMs;
+  return Math.max(0, Math.round((endMs - new Date(checkInTime).getTime()) / 60000));
+}
+
+export type AttendanceStaySummary = {
+  totalVisits: number;
+  totalMinutes: number;
+  averageMinutes: number;
+  thisMonthVisits: number;
+  thisMonthMinutes: number;
+  thisYearVisits: number;
+  thisYearMinutes: number;
+};
+
+/** 生徒プロフィール画面の来塾サマリーと同様の指標を算出 */
+export function attendanceStaySummary(profile: StudentFullProfile): AttendanceStaySummary {
+  const nowMs = Date.now();
+  const todayKey = dateKeyInAppTz(new Date());
+  const thisYear = todayKey.slice(0, 4);
+  const thisMonth = todayKey.slice(0, 7);
+
+  let totalMinutes = 0;
+  let thisMonthVisits = 0;
+  let thisMonthMinutes = 0;
+  let thisYearVisits = 0;
+  let thisYearMinutes = 0;
+
+  for (const a of profile.attendances) {
+    const dayKey = dateKeyInAppTz(a.check_in_time);
+    const mins = visitDurationMinutes(a.check_in_time, a.check_out_time, nowMs);
+    totalMinutes += mins;
+
+    if (dayKey.startsWith(thisYear)) {
+      thisYearVisits += 1;
+      thisYearMinutes += mins;
+    }
+    if (dayKey.startsWith(thisMonth)) {
+      thisMonthVisits += 1;
+      thisMonthMinutes += mins;
+    }
+  }
+
+  const totalVisits = profile.attendances.length;
+  return {
+    totalVisits,
+    totalMinutes,
+    averageMinutes: totalVisits > 0 ? Math.round(totalMinutes / totalVisits) : 0,
+    thisMonthVisits,
+    thisMonthMinutes,
+    thisYearVisits,
+    thisYearMinutes,
+  };
 }
