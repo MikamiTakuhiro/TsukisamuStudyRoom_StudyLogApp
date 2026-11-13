@@ -81,10 +81,8 @@ export default function DashboardPage() {
   }
 
   return (
-    <StudentShell title={`${user.name} さん`} user={user} fillViewport>
-      <div className="dashboard-home app-shell flex min-h-0 flex-1 flex-col gap-2 overflow-hidden px-4 py-2 pb-20">
-        {activeSeat && <div className="badge-active shrink-0"><Ft>入室中</Ft>: {activeSeat}</div>}
-
+    <StudentShell title={`${user.name} さん`} user={user} fillViewport activeSeat={activeSeat}>
+      <div className="dashboard-home app-shell flex min-h-0 flex-1 flex-col gap-2 overflow-hidden px-4 py-2 pb-[10px]">
         {!isReadOnly && (
           <Link
             href="/scan"
@@ -96,11 +94,10 @@ export default function DashboardPage() {
         )}
 
         <section
-          className={`card shrink-0 py-3 ${
-            openMenuId
-              ? "relative z-30 overflow-visible"
-              : "max-h-[min(28vh,12rem)] overflow-y-auto"
-          }`}
+          className={`card shrink-0 py-3 ${openMenuId
+            ? "relative z-30 overflow-visible"
+            : "max-h-[min(28vh,12rem)] overflow-y-auto"
+            }`}
         >
           <h2 className="section-title mb-2"><Ft>通知・リマインド</Ft></h2>
           {notifications.length === 0 ? (
@@ -122,11 +119,11 @@ export default function DashboardPage() {
                 }}
                 onUpdatePlan={
                   n.notification_type !== "broadcast" &&
-                  (n.notification_type === "plan_gap" || n.trigger_gap_detected)
+                    (n.notification_type === "plan_gap" || n.trigger_gap_detected)
                     ? () => {
-                        setOpenMenuId(null);
-                        router.push(studyPlanFocusUrl(n.content));
-                      }
+                      setOpenMenuId(null);
+                      router.push(studyPlanFocusUrl(n.content));
+                    }
                     : undefined
                 }
                 onDelete={async () => {
@@ -170,8 +167,16 @@ export default function DashboardPage() {
       )}
 
       {selectedDay && (
-        <div className="modal-overlay items-end sm:items-center sm:justify-center">
-          <div className="modal-panel w-full rounded-t-3xl bg-white p-6 sm:rounded-3xl">
+        <div
+          className="modal-overlay items-end sm:items-center sm:justify-center"
+          onClick={(event) => {
+            if (event.target === event.currentTarget) setSelectedDay(null);
+          }}
+        >
+          <div
+            className="modal-panel w-full rounded-t-3xl bg-white p-6 sm:rounded-3xl"
+            onClick={(event) => event.stopPropagation()}
+          >
             <h3 className="text-lg font-bold text-black"><FormatDateJa iso={selectedDay.date} /></h3>
             {selectedDay.lines.length > 0 && (
               <div className="mt-3">
@@ -280,8 +285,16 @@ export default function DashboardPage() {
       )}
 
       {detailNotification && (
-        <div className="modal-overlay items-end sm:items-center sm:justify-center">
-          <div className="modal-panel w-full rounded-t-3xl bg-white p-6 sm:max-w-md sm:rounded-3xl">
+        <div
+          className="modal-overlay items-end sm:items-center sm:justify-center"
+          onClick={(event) => {
+            if (event.target === event.currentTarget) setDetailNotification(null);
+          }}
+        >
+          <div
+            className="modal-panel w-full rounded-t-3xl bg-white p-6 sm:max-w-md sm:rounded-3xl"
+            onClick={(event) => event.stopPropagation()}
+          >
             <h3 className="text-lg font-bold text-black"><Ft>通知の詳細</Ft></h3>
             <dl className="mt-4 space-y-3 text-sm text-black">
               <div>

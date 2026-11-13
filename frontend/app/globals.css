@@ -11,6 +11,7 @@
   --border: #d4dce8;
   --surface: #f7f9fc;
   --app-header-height: 4.5rem;
+  --student-bottom-nav-height: 4.5rem;
 }
 
 @theme inline {
@@ -44,8 +45,18 @@ body {
 }
 
 /* 全画面共通: テキストは原則黒（紺背景エリアは除外） */
-p, span, label, h1, h2, h3, h4, li, td, th, legend {
-  color: #000000;
+p,
+span,
+label,
+h1,
+h2,
+h3,
+h4,
+li,
+td,
+th,
+legend {
+  /* color: #000000; */
 }
 
 /* 濃紺背景上の文字は常に白 */
@@ -273,6 +284,7 @@ a.btn-secondary {
     transform 0.15s cubic-bezier(0.34, 1.4, 0.64, 1),
     background 0.2s ease,
     box-shadow 0.2s ease;
+  box-shadow: 1px 4px 4px rgba(0, 0, 0, 0.5);
 }
 
 @media (hover: hover) {
@@ -317,6 +329,107 @@ a.btn-secondary {
   border: 2px solid var(--navy);
 }
 
+.student-bottom-nav-spacer {
+  height: calc(var(--student-bottom-nav-height) + env(safe-area-inset-bottom));
+  flex: 0 0 auto;
+}
+
+.student-bottom-nav {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 40;
+  display: flex;
+  height: calc(var(--student-bottom-nav-height) + env(safe-area-inset-bottom));
+  box-sizing: border-box;
+  padding: 0.375rem 0.5rem calc(0.375rem + env(safe-area-inset-bottom));
+  background: #ffffff;
+  box-shadow: 0 -4px 16px rgba(26, 39, 68, 0.2);
+}
+
+.student-bottom-nav-link {
+  display: flex;              /* flexboxを有効化 */
+  flex-direction: column;     /* 横並び(row)から縦並び(column)に変更 */
+  align-items: center;        /* 水平方向（交差軸）の中央揃え */
+  justify-content: center;    /* 垂直方向（主軸）の中央揃え */
+  gap: 0.25rem;               /* 縦並びに合わせて余白を微調整（必要に応じて） */
+
+  flex: 1 1 0;
+  min-width: 0;
+  border-radius: 0.75rem;
+  font-size: 0.75rem;         /* ボトムナビの縦並びテキストは少し小さめ(11〜12px前後)が見やすくなります */
+  font-weight: 700;
+  text-align: center;
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    background 0.2s ease,
+    color 0.2s ease,
+    transform 0.15s ease;
+}
+
+.student-bottom-nav-link .menu-nav-icon {
+  color: currentColor;
+}
+
+.student-bottom-nav-link[aria-current="page"] {
+  background: var(--moon-yellow);
+  color: var(--navy);
+}
+
+.student-bottom-nav-link--home {
+  position: absolute;
+  top: -1.125rem;
+  left: 50%;
+  z-index: 1;
+  width: 5.5rem;
+  height: 5.5rem;
+  box-sizing: border-box;
+  flex: none;
+  margin: 0;
+  transform: translateX(-50%);
+  border: 8px solid var(--moon-yellow);
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 3px 8px rgba(26, 39, 68, 0.2);
+  color: var(--navy);
+  transition:
+    background 0.2s ease,
+    color 0.2s ease,
+    transform 0.15s ease;
+}
+
+.student-bottom-nav-link--home[aria-current="page"] {
+  background: var(--moon-yellow);
+  color: var(--navy);
+}
+
+.student-bottom-nav-link:hover {
+  background: var(--navy-light);
+}
+
+.student-bottom-nav-link[aria-current="page"]:hover {
+  background: var(--moon-yellow-dark);
+}
+
+.student-bottom-nav-link--home:not([aria-current="page"]):hover {
+  background: #ffffff;
+}
+
+.student-bottom-nav-link:active {
+  transform: scale(0.96);
+}
+
+.student-bottom-nav-link--home:active {
+  transform: translateX(-50%) scale(0.96);
+}
+
+.student-bottom-nav-link:focus-visible {
+  outline: 3px solid #ffffff;
+  outline-offset: -4px;
+}
+
 .badge-complete {
   border-radius: 9999px;
   background: var(--navy);
@@ -328,7 +441,7 @@ a.btn-secondary {
 
 .fab {
   position: fixed;
-  bottom: 1.5rem;
+  bottom: calc(var(--student-bottom-nav-height) + env(safe-area-inset-bottom) + 10px);
   right: 1.5rem;
   width: 4.5rem;
   height: 4.5rem;
@@ -338,11 +451,11 @@ a.btn-secondary {
   font-size: 2.25rem;
   font-weight: 700;
   border: 3px solid var(--navy);
-  box-shadow: 0 4px 16px rgba(26, 39, 68, 0.25);
+  box-shadow: 1px 4px 4px rgba(0, 0, 0, 0.5);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 40;
+  z-index: 50;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
@@ -366,13 +479,11 @@ a.btn-secondary {
 }
 
 .calendar-stripe {
-  background: repeating-linear-gradient(
-    45deg,
-    var(--moon-yellow),
-    var(--moon-yellow) 6px,
-    var(--navy) 6px,
-    var(--navy) 12px
-  );
+  background: repeating-linear-gradient(45deg,
+      var(--moon-yellow),
+      var(--moon-yellow) 6px,
+      var(--navy) 6px,
+      var(--navy) 12px);
 }
 
 .progress-slide {
@@ -483,7 +594,7 @@ a.btn-secondary {
   background: var(--moon-yellow);
 }
 
-.notification-menu-item + .notification-menu-item {
+.notification-menu-item+.notification-menu-item {
   border-top: 1px solid var(--border);
 }
 
@@ -739,6 +850,7 @@ a.btn-secondary {
   from {
     opacity: 0;
   }
+
   to {
     opacity: 1;
   }
@@ -749,6 +861,7 @@ a.btn-secondary {
     opacity: 0;
     transform: translateY(1.5rem);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -759,6 +872,7 @@ a.btn-secondary {
   from {
     transform: translateX(100%);
   }
+
   to {
     transform: translateX(0);
   }
@@ -769,6 +883,7 @@ a.btn-secondary {
     opacity: 0;
     transform: scale(0.92);
   }
+
   to {
     opacity: 1;
     transform: scale(1);
@@ -780,6 +895,7 @@ a.btn-secondary {
     opacity: 0;
     transform: translateY(0.625rem);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -787,6 +903,7 @@ a.btn-secondary {
 }
 
 @media (prefers-reduced-motion: reduce) {
+
   *,
   *::before,
   *::after {

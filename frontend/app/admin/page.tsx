@@ -447,8 +447,16 @@ export default function AdminPage() {
       </div>
 
       {detailNotification && (
-        <div className="modal-overlay items-end sm:items-center sm:justify-center">
-          <div className="modal-panel w-full rounded-t-3xl bg-white p-6 sm:max-w-md sm:rounded-3xl">
+        <div
+          className="modal-overlay items-end sm:items-center sm:justify-center"
+          onClick={(event) => {
+            if (event.target === event.currentTarget) setDetailNotification(null);
+          }}
+        >
+          <div
+            className="modal-panel w-full rounded-t-3xl bg-white p-6 sm:max-w-md sm:rounded-3xl"
+            onClick={(event) => event.stopPropagation()}
+          >
             <h3 className="text-lg font-bold text-black">通知の詳細</h3>
             <dl className="mt-4 space-y-3 text-sm text-black">
               <div>
