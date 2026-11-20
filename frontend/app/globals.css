@@ -527,10 +527,10 @@ a.btn-secondary {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 2rem;
-  min-height: 2rem;
+  min-width: 2.75rem;
+  min-height: 2.75rem;
   padding: 0 0.375rem;
-  border-radius: 0.5rem;
+  border-radius: 0.75rem;
   border: none;
   background: transparent;
   color: #000000;
@@ -912,3 +912,501 @@ a.btn-secondary {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ===== 管理者画面レイアウト ===== */
+.admin-sidebar {
+  display: none;
+}
+
+.admin-bottom-nav {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 40;
+  display: flex;
+  height: calc(var(--student-bottom-nav-height) + env(safe-area-inset-bottom));
+  box-sizing: border-box;
+  gap: 0.25rem;
+  padding: 0.375rem 0.5rem calc(0.375rem + env(safe-area-inset-bottom));
+  background: #ffffff;
+  border-top: 2px solid var(--navy);
+  box-shadow: 0 -4px 16px rgba(26, 39, 68, 0.2);
+}
+
+.admin-bottom-nav-link {
+  display: flex;
+  flex: 1 1 0;
+  min-width: 0;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.125rem;
+  border-radius: 0.75rem;
+  color: var(--navy);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    background 0.2s ease,
+    transform 0.15s ease;
+}
+
+.admin-bottom-nav-link:active {
+  transform: scale(0.96);
+}
+
+.admin-bottom-nav-link[aria-current="page"] {
+  background: var(--moon-yellow);
+}
+
+.admin-content {
+  width: 100%;
+  margin: 0 auto;
+}
+
+@media (min-width: 1024px) {
+  .admin-sidebar {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 45;
+    display: flex;
+    width: 16rem;
+    flex-direction: column;
+    background: #ffffff;
+    border-right: 2px solid var(--navy);
+  }
+
+  .admin-sidebar-brand {
+    padding: 1.25rem 1rem;
+    background: var(--navy);
+    border-bottom: 2px solid var(--navy-light);
+  }
+
+  .admin-sidebar-link {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    border-radius: 0.75rem;
+    padding: 0.75rem 1rem;
+    color: #000000;
+    font-weight: 700;
+    text-decoration: none;
+    transition: background 0.2s ease;
+  }
+
+  .admin-sidebar-link:hover {
+    background: rgba(255, 213, 79, 0.4);
+  }
+
+  .admin-sidebar-link[aria-current="page"] {
+    background: var(--moon-yellow);
+    box-shadow: inset 4px 0 0 var(--navy);
+  }
+
+  .admin-main {
+    margin-left: 16rem;
+  }
+
+  .admin-bottom-nav {
+    display: none;
+  }
+
+  .admin-content {
+    max-width: 90rem;
+    padding: 0 1rem;
+  }
+}
+
+/* 管理画面の PC 向け表・タブ */
+.admin-section-tabs {
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+  border-bottom: 2px solid var(--navy);
+  scrollbar-width: thin;
+}
+
+.admin-section-tab {
+  flex: 0 0 auto;
+  padding: 0.75rem 1.25rem;
+  border: 2px solid var(--navy);
+  border-bottom: none;
+  background: #ffffff;
+  color: var(--navy);
+  font-size: 0.9375rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.admin-section-tab:hover {
+  background: rgba(255, 213, 79, 0.45);
+}
+
+.admin-section-tab[aria-selected="true"] {
+  background: var(--moon-yellow);
+}
+
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9375rem;
+}
+
+/* 表を縦横スクロール領域にし、見出し行をその最上部に固定する */
+.admin-table-scroll {
+  /* 高さは固定。これを超える人数のときは表の中だけスクロール */
+  max-height: 32rem;
+  overflow: auto;
+  border: 2px solid var(--border);
+  border-radius: 0.75rem;
+}
+
+.admin-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  white-space: nowrap;
+  background: var(--surface);
+  color: var(--navy);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  text-align: left;
+  padding: 0.625rem 0.75rem;
+  border-bottom: 2px solid var(--navy);
+}
+
+.admin-table td {
+  padding: 0.75rem;
+  border-bottom: 1px solid var(--border);
+  color: #000000;
+  vertical-align: middle;
+}
+
+.admin-table tbody tr:hover {
+  background: rgba(255, 213, 79, 0.18);
+}
+
+/* 表内などで使うコンパクトボタン */
+.btn-sm,
+a.btn-sm {
+  min-height: 2.25rem;
+  padding: 0.375rem 0.875rem;
+  font-size: 0.875rem;
+  white-space: nowrap;
+}
+
+
+
+/* ===== 生徒画面: 共通フィードバック ===== */
+.toast-stack {
+  position: fixed;
+  left: 50%;
+  bottom: calc(var(--student-bottom-nav-height) + env(safe-area-inset-bottom) + 0.75rem);
+  z-index: 80;
+  display: flex;
+  width: min(28rem, calc(100% - 2rem));
+  transform: translateX(-50%);
+  flex-direction: column;
+  gap: 0.5rem;
+  pointer-events: none;
+}
+
+.toast {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.75rem 1rem;
+  border-radius: 1rem;
+  border: 2px solid var(--navy);
+  background: #ffffff;
+  color: #000000;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  box-shadow: 0 8px 24px rgba(26, 39, 68, 0.25);
+  pointer-events: auto;
+  cursor: pointer;
+  animation: app-slide-up 0.3s cubic-bezier(0.34, 1.2, 0.64, 1) both;
+}
+
+.toast--success {
+  border-color: #15803d;
+  background: #f0fdf4;
+}
+
+.toast--error {
+  border-color: #dc2626;
+  background: #fef2f2;
+}
+
+.toast-icon {
+  display: inline-flex;
+  flex: 0 0 auto;
+  width: 1.5rem;
+  height: 1.5rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  background: var(--navy);
+  color: #ffffff;
+  font-size: 0.875rem;
+}
+
+.toast--success .toast-icon {
+  background: #15803d;
+}
+
+.toast--error .toast-icon {
+  background: #dc2626;
+}
+
+.app-spinner {
+  display: inline-block;
+  flex: 0 0 auto;
+  border-radius: 9999px;
+  border: 3px solid color-mix(in srgb, currentColor 20%, transparent);
+  border-top-color: currentColor;
+  animation: app-spin 0.8s linear infinite;
+}
+
+@keyframes app-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.skeleton {
+  background: linear-gradient(90deg, var(--surface) 25%, #e8edf5 50%, var(--surface) 75%);
+  background-size: 200% 100%;
+  animation: app-skeleton 1.2s ease-in-out infinite;
+}
+
+@keyframes app-skeleton {
+  from {
+    background-position: 200% 0;
+  }
+
+  to {
+    background-position: -200% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-spinner,
+  .skeleton {
+    animation-duration: 2.4s;
+  }
+}
+
+.field-badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 0.375rem;
+  padding: 0.0625rem 0.375rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.field-badge--required {
+  background: #dc2626;
+  color: #ffffff;
+}
+
+.field-badge--optional {
+  background: var(--border);
+  color: var(--navy);
+}
+
+/* 小さな操作ボタン（キャンセルなど）でもタップ領域 44px 以上を確保 */
+.btn-tap-sm {
+  display: inline-flex;
+  min-height: 2.75rem;
+  min-width: 2.75rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  border-radius: 9999px;
+  padding: 0 1rem;
+  font-size: 0.875rem;
+  font-weight: 700;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  transition: transform 0.15s ease;
+}
+
+.btn-tap-sm:active:not(:disabled) {
+  transform: scale(0.95);
+}
+
+/* ===== QR スキャン ===== */
+.scan-viewport {
+  position: relative;
+  overflow: hidden;
+  background: #000000;
+}
+
+.scan-frame {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: min(68%, 18rem);
+  aspect-ratio: 1 / 1;
+  transform: translate(-50%, -50%);
+  border-radius: 1.25rem;
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.45);
+  pointer-events: none;
+}
+
+.scan-frame::before,
+.scan-frame::after,
+.scan-frame span::before,
+.scan-frame span::after {
+  content: "";
+  position: absolute;
+  width: 2.25rem;
+  height: 2.25rem;
+  border: 5px solid var(--moon-yellow);
+}
+
+.scan-frame::before {
+  top: 0;
+  left: 0;
+  border-right: none;
+  border-bottom: none;
+  border-top-left-radius: 1.25rem;
+}
+
+.scan-frame::after {
+  top: 0;
+  right: 0;
+  border-left: none;
+  border-bottom: none;
+  border-top-right-radius: 1.25rem;
+}
+
+.scan-frame span::before {
+  bottom: 0;
+  left: 0;
+  border-right: none;
+  border-top: none;
+  border-bottom-left-radius: 1.25rem;
+}
+
+.scan-frame span::after {
+  bottom: 0;
+  right: 0;
+  border-left: none;
+  border-top: none;
+  border-bottom-right-radius: 1.25rem;
+}
+
+.scan-line {
+  position: absolute;
+  left: 8%;
+  right: 8%;
+  height: 3px;
+  border-radius: 9999px;
+  background: var(--moon-yellow);
+  box-shadow: 0 0 12px var(--moon-yellow);
+  animation: app-scan-line 2s ease-in-out infinite alternate;
+}
+
+@keyframes app-scan-line {
+  from {
+    top: 10%;
+  }
+
+  to {
+    top: 88%;
+  }
+}
+
+/* ===== 来塾予約: 空き状況ストリップ ===== */
+.slot-strip {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(3.25rem, 1fr);
+  gap: 0.25rem;
+  overflow-x: auto;
+  padding-bottom: 0.25rem;
+}
+
+.slot-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.125rem;
+  border-radius: 0.625rem;
+  border: 2px solid transparent;
+  padding: 0.375rem 0.125rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #000000;
+}
+
+.slot-cell--ok {
+  border-color: #86efac;
+  background: #f0fdf4;
+}
+
+.slot-cell--few {
+  border-color: #fdba74;
+  background: #fff7ed;
+}
+
+.slot-cell--full {
+  border-color: #dc2626;
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.slot-cell--dim {
+  opacity: 0.35;
+}
+
+/* ===== 期限バッジ ===== */
+.badge-deadline {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 9999px;
+  padding: 0.125rem 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.badge-deadline--overdue {
+  background: #dc2626;
+  color: #ffffff;
+}
+
+.badge-deadline--soon {
+  background: #fff7ed;
+  color: #c2410c;
+  border: 1.5px solid #fdba74;
+}
+
+.badge-judgment {
+  display: inline-flex;
+  min-width: 1.75rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.5rem;
+  padding: 0.125rem 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 800;
+  color: #ffffff;
+  background: var(--navy);
+}
+
+.badge-judgment--A { background: #15803d; }
+.badge-judgment--B { background: #2563eb; }
+.badge-judgment--C { background: #ca8a04; }
+.badge-judgment--D { background: #ea580c; }
+.badge-judgment--E { background: #dc2626; }

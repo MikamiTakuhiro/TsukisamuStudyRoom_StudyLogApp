@@ -61,6 +61,14 @@ function cellClass(color: string) {
   return "bg-white border-[var(--border)]";
 }
 
+/** 色の意味を読み上げ・aria-label 用の文言にする */
+function colorDescription(color: string) {
+  if (color === "yellow") return "塾で学習";
+  if (color === "navy") return "家で学習";
+  if (color === "stripe") return "塾と家で学習";
+  return "学習記録なし";
+}
+
 function dayNumberClass(color: string) {
   if (color === "navy") return "text-white/95";
   return "text-black/75";
@@ -70,10 +78,12 @@ export default function StudyCalendar({
   weeks,
   onDayClick,
   fillHeight = false,
+  loading = false,
 }: {
   weeks: CalendarWeek[];
   onDayClick: (week: CalendarWeek, dayIndex: number) => void;
   fillHeight?: boolean;
+  loading?: boolean;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const weekRefs = useRef<(HTMLDivElement | null)[]>([]);
@@ -88,6 +98,14 @@ export default function StudyCalendar({
 
   const [visibleYear, setVisibleYear] = useState(initial.year);
   const [visibleMonth, setVisibleMonth] = useState(initial.month);
+  /** 最新週（今日）から離れたら「今日へ」ボタンを出す */
+  const [awayFromToday, setAwayFromToday] = useState(false);
+
+  const scrollToToday = useCallback(() => {
+    const container = scrollRef.current;
+    if (!container) return;
+    container.scrollTo({ top: container.scrollHeight, behavior: "smooth" });
+  }, []);
 
   const updateVisibleMonth = useCallback(() => {
     const container = scrollRef.current;
@@ -108,6 +126,7 @@ export default function StudyCalendar({
     const { year, month } = getWeekBottomMonth(weeks[targetIndex]);
     setVisibleYear(year);
     setVisibleMonth(month);
+    setAwayFromToday(container.scrollHeight - container.scrollTop - container.clientHeight > 80);
   }, [weeks]);
 
   useEffect(() => {
@@ -133,15 +152,27 @@ export default function StudyCalendar({
       <h2 className="section-title mb-2 shrink-0 px-1"><Ft>学習履歴カレンダー</Ft></h2>
 
       <div className={`calendar-chrome z-10 shrink-0 bg-white ${fillHeight ? "" : "sticky top-0"}`}>
-        <div className="border-b border-[var(--border)] px-2 py-2.5">
-          <p className="text-center text-lg font-bold tracking-tight text-[var(--navy)]">
-            {visibleYear}年{visibleMonth}月
+        <div className="relative flex min-h-[2.75rem] items-center justify-center border-b border-[var(--border)] px-2 py-1.5">
+          <p className="text-center text-lg font-bold tracking-tight text-[var(--navy)]" aria-live="polite">
+            {visibleYear}<Ft>年</Ft>{visibleMonth}<Ft>月</Ft>
           </p>
+          {awayFromToday && (
+            <button
+              type="button"
+              onClick={scrollToToday}
+              className="btn-tap-sm absolute right-1 top-1/2 -translate-y-1/2 border-2 border-[var(--navy)] bg-[var(--moon-yellow)] text-black"
+            >
+              <Ft>今日へ</Ft> ↓
+            </button>
+          )}
         </div>
 
         <div className="grid grid-cols-7 border-b border-[var(--border)] bg-white py-2">
           {DAY_LABELS.map((d) => (
-            <span key={d} className="text-center text-[11px] font-bold text-[var(--navy)]">
+            <span
+              key={d}
+              className={`text-center text-xs font-bold ${d === "日" ? "text-red-600" : d === "土" ? "text-blue-700" : "text-[var(--navy)]"}`}
+            >
               <DayLabel label={d} />
             </span>
           ))}
@@ -155,6 +186,13 @@ export default function StudyCalendar({
         }`}
         onScroll={updateVisibleMonth}
       >
+        {loading && weeks.length === 0 && (
+          <div className="space-y-1 py-1" role="status" aria-label="読み込み中">
+            {Array.from({ length: 5 }, (_, i) => (
+              <div key={i} className="skeleton h-11 rounded-md" />
+            ))}
+          </div>
+        )}
         {weeks.map((week, wi) => {
           const monthLabels = getMonthLabelsForWeek(week);
           return (
@@ -173,29 +211,41 @@ export default function StudyCalendar({
                 </p>
               ))}
               <div className="grid grid-cols-7 gap-0.5 py-0.5">
-                {week.days.map((day, idx) => (
+                {week.days.map((day, idx) => {
+                  const planCount = day.target_plans?.length ?? 0;
+                  const label = [
+                    formatDateJa(day.date),
+                    day.is_today ? "今日" : null,
+                    colorDescription(day.color),
+                    planCount > 0 ? `完了目標 ${planCount}件` : null,
+                  ]
+                    .filter(Boolean)
+                    .join("、");
+                  return (
                   <button
                     key={day.date}
                     type="button"
                     onClick={() => onDayClick(week, idx)}
                     className={`calendar-day-cell relative w-full rounded-md border ${cellClass(day.color)} ${
                       day.is_today ? "calendar-day-today" : ""
-                    } ${fillHeight ? "min-h-[40px]" : "min-h-[56px]"}`}
-                    aria-label={formatDateJa(day.date)}
+                    } ${fillHeight ? "min-h-[44px]" : "min-h-[56px]"}`}
+                    aria-label={label}
+                    aria-current={day.is_today ? "date" : undefined}
                   >
                     <span
-                      className={`absolute left-1.5 top-1 text-[11px] font-semibold leading-none ${dayNumberClass(day.color)}`}
+                      className={`absolute left-1.5 top-1 text-xs font-bold leading-none ${dayNumberClass(day.color)}`}
                     >
                       {parseDate(day.date).day}
                     </span>
-                    {((day.target_plans?.length ?? 0) > 0) && (
+                    {planCount > 0 && (
                       <span
-                        className="absolute bottom-1 right-1 h-2 w-2 rounded-full bg-red-500"
+                        className="absolute bottom-1 right-1 h-2.5 w-2.5 rounded-full border border-white bg-red-500"
                         aria-hidden="true"
                       />
                     )}
                   </button>
-                ))}
+                  );
+                })}
               </div>
             </div>
           );
@@ -203,18 +253,18 @@ export default function StudyCalendar({
         <div className="h-1" />
       </div>
 
-      <div className="mt-2 flex shrink-0 flex-wrap gap-2 border-t border-[var(--border)] px-1 pt-2 text-xs font-bold text-black">
+      <div className="mt-2 flex shrink-0 flex-wrap gap-x-3 gap-y-1 border-t border-[var(--border)] px-1 pt-2 text-xs font-bold text-black">
         <span className="inline-flex items-center gap-1">
-          <span className="inline-block h-4 w-4 rounded border border-[var(--navy)] bg-[var(--moon-yellow)]" /> <Ft>塾</Ft>
+          <span className="inline-block h-4 w-4 rounded border border-[var(--navy)] bg-[var(--moon-yellow)]" /> <Ft>塾で学習</Ft>
         </span>
         <span className="inline-flex items-center gap-1">
-          <span className="inline-block h-4 w-4 rounded bg-[var(--navy)]" /> <Ft>家</Ft>
+          <span className="inline-block h-4 w-4 rounded bg-[var(--navy)]" /> <Ft>家で学習</Ft>
         </span>
         <span className="inline-flex items-center gap-1">
-          <span className="inline-block h-4 w-4 rounded border border-[var(--navy)] calendar-stripe" /> <Ft>塾+家</Ft>
+          <span className="inline-block h-4 w-4 rounded border border-[var(--navy)] calendar-stripe" /> <Ft>塾と家</Ft>
         </span>
         <span className="inline-flex items-center gap-1">
-          <span className="inline-block h-2 w-2 rounded-full bg-red-500" /> <Ft>目標</Ft>
+          <span className="inline-block h-2.5 w-2.5 rounded-full bg-red-500" /> <Ft>完了目標日</Ft>
         </span>
       </div>
     </div>

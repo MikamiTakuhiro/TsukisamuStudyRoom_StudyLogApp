@@ -8,14 +8,18 @@ export type MenuNavIconName =
   | "aspirations"
   | "study-plans"
   | "exams"
-  | "profile";
+  | "profile"
+  | "admin-home"
+  | "analytics"
+  | "students"
+  | "logout";
 
-function IconSvg({ children }: { children: ReactNode }) {
+function IconSvg({ children, size = 30 }: { children: ReactNode; size?: number }) {
   return (
     <svg
       viewBox="0 0 24 24"
-      width={30}
-      height={30}
+      width={size}
+      height={size}
       fill="none"
       stroke="currentColor"
       strokeWidth={2}
@@ -29,8 +33,39 @@ function IconSvg({ children }: { children: ReactNode }) {
   );
 }
 
-export default function MenuNavIcon({ name }: { name: MenuNavIconName }) {
+export default function MenuNavIcon({ name, size }: { name: MenuNavIconName; size?: number }) {
   switch (name) {
+    case "admin-home":
+      return (
+        <IconSvg size={size}>
+          <rect x="4" y="4" width="7" height="7" rx="1.5" />
+          <rect x="13" y="4" width="7" height="7" rx="1.5" />
+          <rect x="4" y="13" width="7" height="7" rx="1.5" />
+          <rect x="13" y="13" width="7" height="7" rx="1.5" />
+        </IconSvg>
+      );
+    case "analytics":
+      return (
+        <IconSvg size={size}>
+          <path d="M4 20V4M4 20h16" />
+          <path d="M8 16v-4M12 16V8M16 16v-6" />
+        </IconSvg>
+      );
+    case "students":
+      return (
+        <IconSvg size={size}>
+          <circle cx="9" cy="8" r="3.2" />
+          <path d="M3 20c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5" />
+          <path d="M16 5.2a3 3 0 0 1 0 5.6M18 14.8c1.8.7 3 2.3 3 5.2" />
+        </IconSvg>
+      );
+    case "logout":
+      return (
+        <IconSvg size={size}>
+          <path d="M10 4H6a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h4" />
+          <path d="M15 8l4 4-4 4M19 12H9" />
+        </IconSvg>
+      );
     case "home":
       return (
         <IconSvg>

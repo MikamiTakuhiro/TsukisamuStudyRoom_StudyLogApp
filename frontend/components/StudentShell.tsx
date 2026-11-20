@@ -26,12 +26,15 @@ export default function StudentShell({
   children,
   fillViewport = false,
   activeSeat,
+  hideBottomNav = false,
 }: {
   title: string;
   user: User;
   children: React.ReactNode;
   fillViewport?: boolean;
   activeSeat?: string | null;
+  /** 確認画面など、誤タップで離脱させたくない場面ではボトムナビを隠す */
+  hideBottomNav?: boolean;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const pathname = usePathname();
@@ -51,7 +54,7 @@ export default function StudentShell({
     <MenuDrawer open={menuOpen} onClose={() => setMenuOpen(false)} isReadOnly={user.is_read_only} />
   );
 
-  const bottomNav = (
+  const bottomNav = hideBottomNav ? null : (
     <>
       <div className="student-bottom-nav-spacer" aria-hidden="true" />
       <nav className="student-bottom-nav" aria-label="メインナビゲーション">

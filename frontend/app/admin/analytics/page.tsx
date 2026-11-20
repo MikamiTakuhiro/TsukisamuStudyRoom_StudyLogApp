@@ -7,6 +7,7 @@ import { aggregateDailyStudy, aggregateSeatUsage, studyEfficiencyIndex } from "@
 import { useAdminProfiles } from "@/lib/useAdminProfiles";
 import { useRequireAdmin } from "@/lib/useRequireAdmin";
 import { gradeLabel } from "@/lib/grades";
+import { downloadAllStudentsHistoryCsv } from "@/lib/studentHistoryExport";
 
 export default function AdminAnalyticsPage() {
   const { ready } = useRequireAdmin();
@@ -38,9 +39,19 @@ export default function AdminAnalyticsPage() {
   return (
     <AdminShell title="分析ダッシュボード">
       <div className="app-shell w-full space-y-6 px-4 py-6 pb-12">
-        <p className="text-sm font-medium text-black">
-          全生徒のデータを統合した概要です。詳細は「生徒別分析」から各生徒の統合グラフを確認できます。
-        </p>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="text-sm font-medium text-black">
+            全生徒のデータを統合した概要です。詳細は「生徒別分析」から各生徒の統合グラフを確認できます。
+          </p>
+          <button
+            type="button"
+            onClick={() => downloadAllStudentsHistoryCsv(profiles)}
+            disabled={profiles.length === 0}
+            className="btn-accent text-sm"
+          >
+            全生徒CSVダウンロード
+          </button>
+        </div>
 
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <AnalyticsKpi label="登録生徒数" value={`${students.length}名`} />
@@ -49,17 +60,19 @@ export default function AdminAnalyticsPage() {
           <AnalyticsKpi label="平均学習効率" value={`${avgEfficiency}件/時`} sub="塾滞在あたり" />
         </div>
 
-        <AnalyticsLineChart
-          title="全体：日別学習記録数（直近30日）"
-          points={aggregateDailyStudy(profiles).map((d) => ({ date: d.date, value: d.count }))}
-          valueSuffix="件"
-        />
+        <div className="grid items-start gap-6 xl:grid-cols-2">
+          <AnalyticsLineChart
+            title="全体：日別学習記録数（直近30日）"
+            points={aggregateDailyStudy(profiles).map((d) => ({ date: d.date, value: d.count }))}
+            valueSuffix="件"
+          />
 
-        <AnalyticsBarChart title="全体：座席別来室回数" items={aggregateSeatUsage(profiles)} valueSuffix="回" />
+          <AnalyticsBarChart title="全体：座席別来室回数" items={aggregateSeatUsage(profiles)} valueSuffix="回" />
+        </div>
 
         <section className="card">
           <h2 className="section-title mb-3">生徒別分析へ</h2>
-          <ul className="divide-y-2 divide-[var(--border)]">
+          <ul className="grid gap-x-8 lg:grid-cols-2 divide-y-0 [&>li]:border-b-2 [&>li]:border-[var(--border)]">
             {students.map((s) => (
               <li key={s.student_id} className="flex items-center justify-between gap-2 py-3">
                 <div>

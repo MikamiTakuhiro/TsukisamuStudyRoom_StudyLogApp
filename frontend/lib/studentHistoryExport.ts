@@ -156,8 +156,7 @@ const CSV_HEADERS = [
   "自動退室",
 ] as const;
 
-export function buildStudentHistoryCsv(profile: StudentFullProfile): string {
-  const rows = buildStudentHistoryCsvRows(profile);
+function csvFromRows(rows: StudentHistoryCsvRow[]): string {
   const lines = [
     CSV_HEADERS.join(","),
     ...rows.map((row) =>
@@ -183,10 +182,24 @@ export function buildStudentHistoryCsv(profile: StudentFullProfile): string {
   return lines.join("\r\n");
 }
 
-export function downloadStudentHistoryCsv(profile: StudentFullProfile): void {
-  const safeName = profile.student.name.replace(/[^\w\u3040-\u30ff\u4e00-\u9faf-]/g, "_");
-  const filename = `来塾学習履歴_${safeName}_${profile.student.user_id}.csv`;
-  const content = buildStudentHistoryCsv(profile);
+export function buildStudentHistoryCsv(profile: StudentFullProfile): string {
+  return csvFromRows(buildStudentHistoryCsvRows(profile));
+}
+
+/** 全生徒分を日付・開始時刻順にまとめたCSV */
+export function buildAllStudentsHistoryCsv(profiles: StudentFullProfile[]): string {
+  const rows = profiles
+    .flatMap((profile) => buildStudentHistoryCsvRows(profile))
+    .sort(
+      (a, b) =>
+        a.date.localeCompare(b.date) ||
+        a.startTime.localeCompare(b.startTime) ||
+        a.studentName.localeCompare(b.studentName, "ja"),
+    );
+  return csvFromRows(rows);
+}
+
+function downloadCsv(filename: string, content: string): void {
   const blob = new Blob(["\uFEFF", content], { type: "text/csv;charset=utf-8" });
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
@@ -194,4 +207,17 @@ export function downloadStudentHistoryCsv(profile: StudentFullProfile): void {
   anchor.download = filename;
   anchor.click();
   URL.revokeObjectURL(url);
+}
+
+export function downloadAllStudentsHistoryCsv(profiles: StudentFullProfile[]): void {
+  const today = formatDateKey(new Date().toISOString());
+  downloadCsv(`来塾学習履歴_全生徒_${today}.csv`, buildAllStudentsHistoryCsv(profiles));
+}
+
+export function downloadStudentHistoryCsv(profile: StudentFullProfile): void {
+  const safeName = profile.student.name.replace(/[^\w\u3040-\u30ff\u4e00-\u9faf-]/g, "_");
+  downloadCsv(
+    `来塾学習履歴_${safeName}_${profile.student.user_id}.csv`,
+    buildStudentHistoryCsv(profile),
+  );
 }
