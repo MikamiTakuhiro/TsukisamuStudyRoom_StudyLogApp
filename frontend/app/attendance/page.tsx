@@ -1,14 +1,26 @@
 "use client";
 
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import StudentShell from "@/components/StudentShell";
+import AttendanceRecordsSection from "@/components/AttendanceRecordsSection";
+import { PageLoading } from "@/components/ui/Input";
+import { Ft } from "@/components/FuriganaText";
+import { useAuth } from "@/lib/useAuth";
 
 export default function AttendancePage() {
-  const router = useRouter();
+  const { user, loading } = useAuth();
 
-  useEffect(() => {
-    router.replace("/profile#attendance-records");
-  }, [router]);
+  if (loading || !user) {
+    return <PageLoading />;
+  }
 
-  return <div className="p-8 font-bold text-black">読み込み中...</div>;
+  return (
+    <StudentShell title="来塾記録" user={user}>
+      <div className="app-shell w-full space-y-4 px-4 py-4 pb-12">
+        <section className="card">
+          <h2 className="section-title mb-3"><Ft>来塾記録</Ft></h2>
+          <AttendanceRecordsSection />
+        </section>
+      </div>
+    </StudentShell>
+  );
 }

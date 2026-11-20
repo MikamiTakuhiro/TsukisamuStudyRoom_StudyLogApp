@@ -13,6 +13,7 @@ import {
   ACHIEVEMENT_LEVELS,
   type StudentFullProfile,
 } from "@/lib/api";
+import { GRADE_OPTIONS } from "@/lib/grades";
 import { useRequireAdmin } from "@/lib/useRequireAdmin";
 import { formatTimeJa, toDatetimeLocalJst, datetimeLocalJstToIso } from "@/lib/utils";
 
@@ -31,13 +32,15 @@ export default function AdminStudentDetailPage() {
     if (ready) reload().catch(console.error);
   }, [ready, studentId]);
 
-  const [studentForm, setStudentForm] = useState({ name: "", grade: 1, gender: "" });
+  const [studentForm, setStudentForm] = useState({ last_name: "", first_name: "", grade: 1, gender: "未回答" });
   const [profileForm, setProfileForm] = useState({ phone: "", email: "", birth_date: "", school_name: "" });
 
   useEffect(() => {
     if (profile) {
       setStudentForm({
-        name: profile.student.name,
+        // 姓名が未登録の既存データは、全体を姓欄に入れて分けて入力し直せるようにする
+        last_name: profile.student.last_name ?? profile.student.name,
+        first_name: profile.student.first_name ?? "",
         grade: profile.student.grade,
         gender: profile.student.gender,
       });
@@ -67,8 +70,8 @@ export default function AdminStudentDetailPage() {
     <AdminShell title={`${profile.student.name} の詳細`}>
       <div className="app-shell w-full space-y-6 px-4 py-6 pb-12">
         <div className="flex flex-wrap gap-2">
-          <Link href="/admin" className="font-bold text-[var(--navy)] underline">
-            ← 運営・管理
+          <Link href="/admin?tab=students" className="font-bold text-[var(--navy)] underline">
+            ← 生徒管理
           </Link>
           <Link href={`/admin/analytics/students/${studentId}`} className="btn-primary text-sm">
             分析グラフ
@@ -79,7 +82,7 @@ export default function AdminStudentDetailPage() {
         <section className="card">
           <h2 className="section-title mb-3">基本情報（編集可）</h2>
           <form
-            className="grid gap-3 sm:grid-cols-4"
+            className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4"
             onSubmit={async (e) => {
               e.preventDefault();
               await adminApi.updateStudent(studentId, studentForm);
@@ -87,16 +90,42 @@ export default function AdminStudentDetailPage() {
               reload();
             }}
           >
-            <Input value={studentForm.name} onChange={(e) => setStudentForm({ ...studentForm, name: e.target.value })} />
-            <Input
-              type="number"
-              min={1}
-              max={12}
-              value={studentForm.grade}
-              onChange={(e) => setStudentForm({ ...studentForm, grade: Number(e.target.value) })}
-            />
-            <Input value={studentForm.gender} onChange={(e) => setStudentForm({ ...studentForm, gender: e.target.value })} />
-            <button type="submit" className="btn-primary">
+            <div>
+              <Label>姓</Label>
+              <Input
+                value={studentForm.last_name}
+                onChange={(e) => setStudentForm({ ...studentForm, last_name: e.target.value })}
+                placeholder="例: 山田"
+                required
+              />
+            </div>
+            <div>
+              <Label>名</Label>
+              <Input
+                value={studentForm.first_name}
+                onChange={(e) => setStudentForm({ ...studentForm, first_name: e.target.value })}
+                placeholder="例: 太郎"
+              />
+            </div>
+            <div>
+              <Label>学年</Label>
+              <Select value={studentForm.grade} onChange={(e) => setStudentForm({ ...studentForm, grade: Number(e.target.value) })}>
+                {GRADE_OPTIONS.map((g) => (
+                  <option key={g.value} value={g.value}>
+                    {g.label}
+                  </option>
+                ))}
+              </Select>
+            </div>
+            <div>
+              <Label>性別</Label>
+              <Select value={studentForm.gender} onChange={(e) => setStudentForm({ ...studentForm, gender: e.target.value })}>
+                {["未回答", "男性", "女性", "その他"].map((g) => (
+                  <option key={g}>{g}</option>
+                ))}
+              </Select>
+            </div>
+            <button type="submit" className="btn-primary sm:col-span-2 lg:col-span-4">
               保存
             </button>
           </form>

@@ -44,6 +44,8 @@ def _user_response(user: Student) -> UserResponse:
         student_id=user.student_id,
         user_id=user.user_id,
         name=user.name,
+        last_name=user.last_name,
+        first_name=user.first_name,
         grade=user.grade,
         gender=user.gender,
         role=user.role,
@@ -194,8 +196,22 @@ async def update_student(
     student = result.scalar_one_or_none()
     if not student:
         raise HTTPException(status_code=404, detail="生徒が見つかりません")
-    if body.name is not None:
+    if body.last_name is not None or body.first_name is not None:
+        last = (body.last_name if body.last_name is not None else student.last_name or "").strip()
+        first = (body.first_name if body.first_name is not None else student.first_name or "").strip()
+        if not (last or first):
+            raise HTTPException(status_code=400, detail="姓または名を入力してください")
+        student.last_name = last or None
+        student.first_name = first or None
+        student.name = f"{last}{first}"
+    elif body.name is not None:
         student.name = body.name
+    if body.name is not None or body.last_name is not None or body.first_name is not None:
+        parent_result = await db.execute(
+            select(Student).where(Student.linked_student_id == student.student_id, Student.role == "parent")
+        )
+        for parent in parent_result.scalars():
+            parent.name = f"{student.name} 保護者"
     if body.grade is not None:
         student.grade = body.grade
     if body.gender is not None:

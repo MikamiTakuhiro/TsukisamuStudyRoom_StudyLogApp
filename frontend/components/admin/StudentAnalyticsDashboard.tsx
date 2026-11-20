@@ -240,8 +240,16 @@ export default function StudentAnalyticsDashboard({ profile }: { profile: Studen
       </div>
 
       {selectedDay && (
-        <div className="modal-overlay items-end sm:items-center sm:justify-center">
-          <div className="modal-panel w-full rounded-t-3xl bg-white p-6 sm:rounded-3xl">
+        <div
+          className="modal-overlay items-end sm:items-center sm:justify-center"
+          onClick={(event) => {
+            if (event.target === event.currentTarget) setSelectedDay(null);
+          }}
+        >
+          <div
+            className="modal-panel w-full rounded-t-3xl bg-white p-6 sm:rounded-3xl"
+            onClick={(event) => event.stopPropagation()}
+          >
             <h3 className="text-lg font-bold text-black">{formatDateJa(selectedDay.date)}</h3>
             {selectedDay.lines.length > 0 && (
               <div className="mt-3">

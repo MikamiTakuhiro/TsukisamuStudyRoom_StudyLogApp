@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { EmptyState } from "@/components/ui/Input";
+import { EmptyState, SkeletonList } from "@/components/ui/Input";
 import { Ft, FormatDateJa } from "@/components/FuriganaText";
 import { attendanceApi, type AttendanceSummary } from "@/lib/api";
 import { formatMinutes } from "@/lib/adminAnalytics";
@@ -19,20 +19,20 @@ export default function AttendanceRecordsSection() {
   }, []);
 
   if (error) {
-    return <p className="font-bold text-black">{error}</p>;
-  }
-
-  if (!summary) {
     return (
-      <p className="font-bold text-black">
-        <Ft>読み込み中...</Ft>
+      <p className="rounded-xl border-2 border-red-300 bg-red-50 p-3 text-sm font-bold text-black" role="alert">
+        {error}
       </p>
     );
   }
 
+  if (!summary) {
+    return <SkeletonList rows={4} />;
+  }
+
   return (
     <div className="space-y-4">
-      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3 text-center">
           <p className="text-xs font-bold text-[var(--navy)]"><Ft>累計来塾回数</Ft></p>
           <p className="mt-1 text-2xl font-bold text-black">

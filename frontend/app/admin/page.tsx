@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import AdminShell from "@/components/AdminShell";
 import { FormatDateTimeJa } from "@/components/FuriganaText";
@@ -15,14 +16,38 @@ import {
 } from "@/lib/api";
 import { GRADE_OPTIONS, gradeLabel } from "@/lib/grades";
 import { useRequireAdmin } from "@/lib/useRequireAdmin";
+import { filterStudentsBySearch } from "@/lib/studentSearch";
 import { buildAccountInfoText, downloadTextFile } from "@/lib/utils";
 
 type NotificationPreviewItem = AdminNotificationItem & {
   recipients: { student_id: number; student_name: string; user_id: string }[];
 };
 
+type AdminTab = "overview" | "students" | "seats" | "notices";
+
+const ADMIN_TABS: { id: AdminTab; label: string }[] = [
+  { id: "overview", label: "出席状況" },
+  { id: "students", label: "生徒管理" },
+  { id: "seats", label: "座席・QR" },
+  { id: "notices", label: "お知らせ" },
+];
+
 export default function AdminPage() {
+  return (
+    <Suspense fallback={null}>
+      <AdminPageContent />
+    </Suspense>
+  );
+}
+
+function AdminPageContent() {
   const { ready } = useRequireAdmin();
+  const searchParams = useSearchParams();
+  const initialTab = searchParams.get("tab");
+  const [tab, setTab] = useState<AdminTab>(
+    ADMIN_TABS.some((t) => t.id === initialTab) ? (initialTab as AdminTab) : "overview",
+  );
+  const [studentQuery, setStudentQuery] = useState("");
   const [students, setStudents] = useState<User[]>([]);
   const [seats, setSeats] = useState<{ seat_id: number; seat_name: string; qr_code_data: string }[]>([]);
   const [live, setLive] = useState<ActiveSeatStatus[]>([]);
@@ -171,13 +196,16 @@ export default function AdminPage() {
   return (
     <AdminShell title="運営・管理">
       <div className="app-shell w-full space-y-6 px-4 py-6 pb-12">
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Link href="/admin/analytics" className="btn-accent text-sm">
             分析ダッシュボード
           </Link>
           <button type="button" onClick={() => adminApi.seedDemo().then(setSeedResult)} className="btn-secondary text-sm">
             デモ管理者作成
           </button>
+          <p className="ml-auto text-sm font-bold text-black">
+            入室中 {live.filter((s) => s.student_name).length} / {live.length}席 ・ 生徒 {students.length}名
+          </p>
         </div>
 
         {seedResult && (
@@ -186,9 +214,25 @@ export default function AdminPage() {
           </div>
         )}
 
+        <div className="admin-section-tabs" role="tablist" aria-label="管理メニュー">
+          {ADMIN_TABS.map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              role="tab"
+              aria-selected={tab === t.id}
+              onClick={() => setTab(t.id)}
+              className="admin-section-tab"
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+
+        {tab === "overview" && (
         <section className="card">
           <h2 className="section-title mb-4">リアルタイム出席状況</h2>
-          <div className="grid gap-2 sm:grid-cols-2">
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {live.map((s) => (
               <div
                 key={s.seat_name}
@@ -202,10 +246,13 @@ export default function AdminPage() {
             ))}
           </div>
         </section>
+        )}
 
-        <section className="card">
+        {tab === "students" && (
+        <div className="grid items-start gap-6 xl:grid-cols-[22rem_1fr]">
+        <section className="card xl:sticky xl:top-[calc(var(--app-header-height)+1rem)]">
           <h2 className="section-title mb-4">生徒新規登録</h2>
-          <form onSubmit={createStudent} className="grid gap-3 sm:grid-cols-2">
+          <form onSubmit={createStudent} className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
             <div>
               <label className="mb-1 block text-xs font-bold text-black">姓</label>
               <Input
@@ -243,7 +290,7 @@ export default function AdminPage() {
                 <option>その他</option>
               </Select>
             </div>
-            <button type="submit" className="btn-danger sm:col-span-2">
+            <button type="submit" className="btn-danger sm:col-span-2 xl:col-span-1">
               登録
             </button>
           </form>
@@ -273,42 +320,66 @@ export default function AdminPage() {
 
         <section className="card">
           <h2 className="section-title mb-4">生徒一覧 ({students.length})</h2>
-          <ul className="divide-y-2 divide-[var(--border)]">
-            {students.map((s) => (
-              <li key={s.student_id} className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <Link href={`/admin/students/${s.student_id}`} className="font-bold text-[var(--navy)] underline">
-                    {s.name}
-                  </Link>
-                  <p className="text-sm font-medium text-black">
-                    {s.user_id} / {gradeLabel(s.grade)}
-                  </p>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <Link href={`/admin/analytics/students/${s.student_id}`} className="btn-primary text-sm">
-                    分析グラフ
-                  </Link>
-                  <Link href={`/admin/students/${s.student_id}`} className="btn-secondary text-sm">
-                    詳細・編集
-                  </Link>
-                  <button type="button" onClick={() => downloadAccount(s)} className="btn-accent text-sm">
-                    ID/PWダウンロード
-                  </button>
-                </div>
-              </li>
-            ))}
-          </ul>
+          <Input
+            type="search"
+            value={studentQuery}
+            onChange={(e) => setStudentQuery(e.target.value)}
+            placeholder="名前・IDで検索"
+            autoComplete="off"
+            className="mb-4"
+          />
+          <div className="admin-table-scroll">
+            <table className="admin-table">
+              <thead>
+                <tr>
+                  <th>氏名</th>
+                  <th>ID</th>
+                  <th>学年</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filterStudentsBySearch(students, studentQuery).map((s) => (
+                  <tr key={s.student_id}>
+                    <td>
+                      <Link href={`/admin/students/${s.student_id}`} className="font-bold text-[var(--navy)] underline">
+                        {s.name}
+                      </Link>
+                    </td>
+                    <td>{s.user_id}</td>
+                    <td className="whitespace-nowrap">{gradeLabel(s.grade)}</td>
+                    <td>
+                      <div className="flex flex-wrap gap-2">
+                        <Link href={`/admin/analytics/students/${s.student_id}`} className="btn-primary btn-sm">
+                          分析グラフ
+                        </Link>
+                        <Link href={`/admin/students/${s.student_id}`} className="btn-secondary btn-sm">
+                          詳細・編集
+                        </Link>
+                        <button type="button" onClick={() => downloadAccount(s)} className="btn-accent btn-sm">
+                          ID/PWダウンロード
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </section>
+        </div>
+        )}
 
+        {tab === "seats" && (
         <section className="card">
           <h2 className="section-title mb-4">座席・QR管理</h2>
-          <form onSubmit={createSeat} className="mb-4 flex gap-2">
+          <form onSubmit={createSeat} className="mb-4 flex max-w-xl gap-2">
             <Input placeholder="座席名 (例: A-1)" value={seatName} onChange={(e) => setSeatName(e.target.value)} className="flex-1" required />
             <button type="submit" className="btn-primary">
               追加
             </button>
           </form>
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
             {seats.map((seat) => (
               <div key={seat.seat_id} className="rounded-xl border-2 border-[var(--border)] p-4">
                 {editingSeatId === seat.seat_id ? (
@@ -371,9 +442,13 @@ export default function AdminPage() {
             ))}
           </div>
         </section>
+        )}
 
+        {tab === "notices" && (
         <section className="card">
           <h2 className="section-title mb-4">全体へのお知らせ</h2>
+          <div className="grid items-start gap-6 xl:grid-cols-2">
+          <div>
           <p className="mb-3 text-sm font-medium text-black">
             急な休みや連絡事項を全生徒・保護者の通知欄に送信します（オレンジ色で表示されます）。
           </p>
@@ -412,7 +487,8 @@ export default function AdminPage() {
           {broadcastResult && (
             <p className="mt-3 rounded-xl bg-green-50 p-3 text-sm font-bold text-green-800">{broadcastResult}</p>
           )}
-          <div className={`mt-4 border-t border-[var(--border)] pt-4 ${openMenuId ? "relative z-30 overflow-visible" : ""}`}>
+          </div>
+          <div className={`border-t border-[var(--border)] pt-4 xl:border-l xl:border-t-0 xl:pl-6 xl:pt-0 ${openMenuId ? "relative z-30 overflow-visible" : ""}`}>
             <h3 className="mb-2 text-sm font-bold text-[var(--navy)]">最近の通知プレビュー</h3>
             <p className="mb-3 text-xs font-medium text-black">
               全体お知らせと学習計画リマインドなど、直近の通知を確認できます。お知らせは送信バッチごとに1件表示します。
@@ -443,12 +519,22 @@ export default function AdminPage() {
               />
             ))}
           </div>
+          </div>
         </section>
+        )}
       </div>
 
       {detailNotification && (
-        <div className="modal-overlay items-end sm:items-center sm:justify-center">
-          <div className="modal-panel w-full rounded-t-3xl bg-white p-6 sm:max-w-md sm:rounded-3xl">
+        <div
+          className="modal-overlay items-end sm:items-center sm:justify-center"
+          onClick={(event) => {
+            if (event.target === event.currentTarget) setDetailNotification(null);
+          }}
+        >
+          <div
+            className="modal-panel w-full rounded-t-3xl bg-white p-6 sm:max-w-md sm:rounded-3xl"
+            onClick={(event) => event.stopPropagation()}
+          >
             <h3 className="text-lg font-bold text-black">通知の詳細</h3>
             <dl className="mt-4 space-y-3 text-sm text-black">
               <div>

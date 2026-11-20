@@ -25,7 +25,7 @@ from app.schemas import (
     AttendanceVisitItem,
     MonthlyAttendanceStats,
 )
-from app.services.auth_service import resolve_effective_student_id
+from app.services.auth_service import is_admin_user, resolve_effective_student_id
 from app.timezone_utils import app_date, ensure_aware_as_app, format_time_app, now_app, today_app
 
 router = APIRouter(prefix="/attendance", tags=["attendance"])
@@ -422,7 +422,7 @@ async def study_calendar(
 
 @router.get("/live", response_model=list[ActiveSeatStatus])
 async def live_status(
-    _: Student = Depends(get_current_user),
+    user: Student = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     seats_result = await db.execute(select(Seat).order_by(Seat.seat_name))
@@ -435,16 +435,28 @@ async def live_status(
     )
     active_map = {seat.seat_id: (att, student) for att, student, seat in active_result.all()}
 
-    return [
-        ActiveSeatStatus(
-            seat_id=seat.seat_id,
-            seat_name=seat.seat_name,
-            student_name=active_map[seat.seat_id][1].name if seat.seat_id in active_map else None,
-            user_id=active_map[seat.seat_id][1].user_id if seat.seat_id in active_map else None,
-            check_in_time=active_map[seat.seat_id][0].check_in_time if seat.seat_id in active_map else None,
+    # 生徒・保護者には他の生徒の氏名・ID を返さない（自分の席かどうかのみ）
+    is_admin = is_admin_user(user)
+    my_student_id = resolve_effective_student_id(user)
+
+    statuses: list[ActiveSeatStatus] = []
+    for seat in seats:
+        active = active_map.get(seat.seat_id)
+        att, student = active if active else (None, None)
+        is_mine = student is not None and student.student_id == my_student_id
+        show_identity = is_admin or is_mine
+        statuses.append(
+            ActiveSeatStatus(
+                seat_id=seat.seat_id,
+                seat_name=seat.seat_name,
+                is_occupied=student is not None,
+                is_mine=is_mine,
+                student_name=student.name if student and show_identity else None,
+                user_id=student.user_id if student and show_identity else None,
+                check_in_time=att.check_in_time if att else None,
+            )
         )
-        for seat in seats
-    ]
+    return statuses
 
 
 @router.patch("/{attendance_id}", response_model=AttendanceResponse)

@@ -9,6 +9,7 @@ import { useRequireAdmin } from "@/lib/useRequireAdmin";
 import { gradeLabel } from "@/lib/grades";
 import { studyEfficiencyIndex, studyPlanCompletionRate } from "@/lib/adminAnalytics";
 import { filterStudentsBySearch } from "@/lib/studentSearch";
+import { downloadAllStudentsHistoryCsv } from "@/lib/studentHistoryExport";
 
 export default function AdminStudentsAnalyticsPage() {
   const { ready } = useRequireAdmin();
@@ -60,14 +61,32 @@ export default function AdminStudentsAnalyticsPage() {
           )}
         </div>
 
+        <div className="card flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="section-title">全生徒の統合データ（CSV）</h2>
+            <p className="mt-1 text-sm font-medium text-black">
+              全{profiles.length}名分の「いつ・誰が・何時から何時まで来たか」「何を勉強したか」を1つのCSVにまとめます。
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => downloadAllStudentsHistoryCsv(profiles)}
+            disabled={profiles.length === 0}
+            className="btn-accent shrink-0 text-sm"
+          >
+            全生徒CSVダウンロード
+          </button>
+        </div>
+
         <p className="text-sm font-medium text-black">
           生徒を選ぶと、学習量・志望校・座席・模試を統合したグラフが表示されます。
         </p>
 
+        <div className="grid gap-4 lg:grid-cols-2 2xl:grid-cols-3">
         {filteredStudents.map((s) => {
           const p = profileMap.get(s.student_id);
           return (
-            <div key={s.student_id} className="card flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div key={s.student_id} className="card flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between lg:flex-col lg:items-stretch xl:flex-row xl:items-center">
               <div>
                 <p className="text-lg font-bold text-black">{s.name}</p>
                 <p className="text-sm text-black">
@@ -86,6 +105,7 @@ export default function AdminStudentsAnalyticsPage() {
             </div>
           );
         })}
+        </div>
 
         {students.length === 0 && <p className="font-medium text-black">生徒が登録されていません。</p>}
         {students.length > 0 && filteredStudents.length === 0 && (
