@@ -1,0 +1,24 @@
+# Render Blueprint（バックエンド FastAPI）
+services:
+  - type: web
+    name: tsukisamu-studylog-api
+    runtime: python
+    plan: free
+    region: singapore          # Supabase (ap-southeast-1) と同じリージョン
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.7
+      - key: APP_ENV
+        value: production
+      - key: SECRET_KEY
+        generateValue: true
+      # Supabase の Session pooler（ポート 5432）。postgresql+asyncpg:// に書き換えて設定
+      - key: DATABASE_URL
+        sync: false
+      # Netlify の URL（例 https://xxxx.netlify.app）。複数はカンマ区切り
+      - key: CORS_ORIGINS
+        sync: false
