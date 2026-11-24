@@ -28,7 +28,7 @@ import {
   topSeatInsight,
   weeklyAverageMinutes,
 } from "@/lib/adminAnalytics";
-import type { CalendarTargetPlan, StudentFullProfile } from "@/lib/api";
+import type { CalendarReservation, CalendarTargetPlan, StudentFullProfile } from "@/lib/api";
 import { dedupeLatestPerDate } from "@/lib/aspirations";
 import { buildCalendarWeeksFromProfile } from "@/lib/studentCalendar";
 import { buildStudentHistoryRows, buildVisitNumberMap, downloadStudentHistoryCsv, attendanceDurationMinutes } from "@/lib/studentHistoryExport";
@@ -39,6 +39,7 @@ export default function StudentAnalyticsDashboard({ profile }: { profile: Studen
     date: string;
     lines: string[];
     targetPlans: CalendarTargetPlan[];
+    reservations: CalendarReservation[];
   } | null>(null);
   const calendarWeeks = useMemo(() => buildCalendarWeeksFromProfile(profile), [profile]);
   const studyDaily = dailyStudyRecordCounts(profile);
@@ -98,6 +99,7 @@ export default function StudentAnalyticsDashboard({ profile }: { profile: Studen
               date: day.date,
               lines: day.summary_lines,
               targetPlans: day.target_plans ?? [],
+              reservations: day.reservations ?? [],
             });
           }}
         />
@@ -266,6 +268,25 @@ export default function StudentAnalyticsDashboard({ profile }: { profile: Studen
                 </ul>
               </div>
             )}
+            {selectedDay.reservations.length > 0 && (
+              <div className="mt-3">
+                <p className="text-sm font-bold text-[var(--navy)]">来塾予約</p>
+                <ul className="mt-2 space-y-2">
+                  {selectedDay.reservations.map((r) => (
+                    <li key={r.reservation_id}>
+                      <Link
+                        href={`/admin/reservations?reservation=${r.reservation_id}&date=${selectedDay.date}`}
+                        className="block rounded-xl border-2 border-green-500/60 bg-green-50 p-3 text-sm font-medium text-black"
+                      >
+                        <span className="mr-2 inline-block h-2 w-2 rounded-full bg-green-500 align-middle" />
+                        {r.start_time}〜{r.end_time}
+                        <span className="mt-1 block text-xs font-bold text-[var(--navy)]">予約管理で確認する →</span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
             {selectedDay.targetPlans.length > 0 && (
               <div className="mt-3">
                 <p className="text-sm font-bold text-[var(--navy)]">完了目標</p>
@@ -282,7 +303,7 @@ export default function StudentAnalyticsDashboard({ profile }: { profile: Studen
                 </ul>
               </div>
             )}
-            {selectedDay.lines.length === 0 && selectedDay.targetPlans.length === 0 && (
+            {selectedDay.lines.length === 0 && selectedDay.reservations.length === 0 && selectedDay.targetPlans.length === 0 && (
               <p className="mt-3 text-black">この日の記録はありません。</p>
             )}
             <button type="button" onClick={() => setSelectedDay(null)} className="btn-secondary mt-4 w-full">

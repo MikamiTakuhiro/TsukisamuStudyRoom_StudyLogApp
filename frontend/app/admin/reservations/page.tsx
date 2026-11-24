@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import AdminShell from "@/components/AdminShell";
 import { Input, Label, Select } from "@/components/ui/Input";
 import ReservationCalendar from "@/components/admin/ReservationCalendar";
@@ -27,6 +27,8 @@ export default function AdminReservationsPage() {
   const [addSubmitting, setAddSubmitting] = useState(false);
   const [selectedDate, setSelectedDate] = useState(todayKey());
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [highlightId, setHighlightId] = useState<number | null>(null);
+  const focusedRef = useRef(false);
   const [editForm, setEditForm] = useState({ reservation_date: "", start_time: "", end_time: "" });
 
   const reload = useCallback(async () => {
@@ -58,6 +60,25 @@ export default function AdminReservationsPage() {
   useEffect(() => {
     if (ready) reload().catch(console.error);
   }, [ready, reload]);
+
+  // 生徒詳細のカレンダーから移動してきた場合、その予約の日を開いて一瞬枠で強調する
+  useEffect(() => {
+    if (focusedRef.current || reservations.length === 0) return;
+    const params = new URLSearchParams(window.location.search);
+    const id = Number(params.get("reservation"));
+    const date = params.get("date");
+    if (!id) return;
+    focusedRef.current = true;
+    window.setTimeout(() => {
+      if (date) setSelectedDate(date);
+      setSheetOpen(true);
+      setHighlightId(id);
+    }, 0);
+    window.setTimeout(() => {
+      document.getElementById(`reservation-${id}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 100);
+    window.setTimeout(() => setHighlightId(null), 2500);
+  }, [reservations]);
 
   function startEdit(r: ReservationItem) {
     setEditingId(r.reservation_id);
@@ -216,7 +237,13 @@ export default function AdminReservationsPage() {
           ) : (
             <ul className="space-y-3">
               {dayReservations.map((r) => (
-                <li key={r.reservation_id} className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3">
+                <li
+                  key={r.reservation_id}
+                  id={`reservation-${r.reservation_id}`}
+                  className={`rounded-xl border bg-[var(--surface)] p-3 transition-shadow ${
+                    highlightId === r.reservation_id ? "border-[var(--navy)] study-plan-focus" : "border-[var(--border)]"
+                  }`}
+                >
                   {editingId === r.reservation_id ? (
                     <form
                       className="space-y-3"

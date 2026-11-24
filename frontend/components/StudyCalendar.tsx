@@ -54,6 +54,12 @@ function getMonthLabelsForWeek(week: CalendarWeek) {
   return labels;
 }
 
+/** 今日を含む週の index（無ければ最終週） */
+function findTodayWeekIndex(weeks: CalendarWeek[]) {
+  const idx = weeks.findIndex((w) => w.days.some((d) => d.is_today));
+  return idx >= 0 ? idx : weeks.length - 1;
+}
+
 function cellClass(color: string) {
   if (color === "yellow") return "bg-[var(--moon-yellow)] border-[var(--navy)]/30";
   if (color === "navy") return "bg-[var(--navy)] border-[var(--navy)]";
@@ -93,7 +99,7 @@ export default function StudyCalendar({
       const now = new Date();
       return { year: now.getFullYear(), month: now.getMonth() + 1 };
     }
-    return getWeekBottomMonth(weeks[weeks.length - 1]);
+    return getWeekBottomMonth(weeks[findTodayWeekIndex(weeks)]);
   }, [weeks]);
 
   const [visibleYear, setVisibleYear] = useState(initial.year);
@@ -101,18 +107,29 @@ export default function StudyCalendar({
   /** 最新週（今日）から離れたら「今日へ」ボタンを出す */
   const [awayFromToday, setAwayFromToday] = useState(false);
 
+  /** 今日の週がスクロール領域の一番下に来る scrollTop */
+  const getTodayScrollTop = useCallback(() => {
+    const container = scrollRef.current;
+    if (!container || !weeks.length) return null;
+    const el = weekRefs.current[findTodayWeekIndex(weeks)];
+    if (!el) return null;
+    const top = el.getBoundingClientRect().bottom - container.getBoundingClientRect().top + container.scrollTop - container.clientHeight;
+    return Math.max(0, top);
+  }, [weeks]);
+
   const scrollToToday = useCallback(() => {
     const container = scrollRef.current;
-    if (!container) return;
-    container.scrollTo({ top: container.scrollHeight, behavior: "smooth" });
-  }, []);
+    const top = getTodayScrollTop();
+    if (!container || top == null) return;
+    container.scrollTo({ top, behavior: "smooth" });
+  }, [getTodayScrollTop]);
 
   const updateVisibleMonth = useCallback(() => {
     const container = scrollRef.current;
     if (!container || !weeks.length) return;
 
     const bottomEdge = container.getBoundingClientRect().bottom - 2;
-    let targetIndex = weeks.length - 1;
+    let targetIndex = Math.max(0, findTodayWeekIndex(weeks));
 
     for (let i = 0; i < weekRefs.current.length; i++) {
       const el = weekRefs.current[i];
@@ -122,12 +139,19 @@ export default function StudyCalendar({
         targetIndex = i;
       }
     }
+    // 下端より下に隠れている週は対象外（上方向に戻す）
+    while (targetIndex > 0) {
+      const el = weekRefs.current[targetIndex];
+      if (el && el.getBoundingClientRect().top <= bottomEdge) break;
+      targetIndex -= 1;
+    }
 
     const { year, month } = getWeekBottomMonth(weeks[targetIndex]);
     setVisibleYear(year);
     setVisibleMonth(month);
-    setAwayFromToday(container.scrollHeight - container.scrollTop - container.clientHeight > 80);
-  }, [weeks]);
+    const todayTop = getTodayScrollTop();
+    setAwayFromToday(todayTop != null && Math.abs(container.scrollTop - todayTop) > 80);
+  }, [weeks, getTodayScrollTop]);
 
   useEffect(() => {
     weekRefs.current = weekRefs.current.slice(0, weeks.length);
@@ -135,15 +159,16 @@ export default function StudyCalendar({
 
   useEffect(() => {
     if (!weeks.length) return;
-    const last = getWeekBottomMonth(weeks[weeks.length - 1]);
-    setVisibleYear(last.year);
-    setVisibleMonth(last.month);
+    const current = getWeekBottomMonth(weeks[findTodayWeekIndex(weeks)]);
+    setVisibleYear(current.year);
+    setVisibleMonth(current.month);
     const container = scrollRef.current;
-    if (container) {
-      container.scrollTop = container.scrollHeight;
+    const top = getTodayScrollTop();
+    if (container && top != null) {
+      container.scrollTop = top;
     }
     requestAnimationFrame(updateVisibleMonth);
-  }, [weeks, updateVisibleMonth]);
+  }, [weeks, updateVisibleMonth, getTodayScrollTop]);
 
   return (
     <div
@@ -162,7 +187,7 @@ export default function StudyCalendar({
               onClick={scrollToToday}
               className="btn-tap-sm absolute right-1 top-1/2 -translate-y-1/2 border-2 border-[var(--navy)] bg-[var(--moon-yellow)] text-black"
             >
-              <Ft>今日へ</Ft> ↓
+              <Ft>今日へ</Ft>
             </button>
           )}
         </div>
@@ -218,6 +243,7 @@ export default function StudyCalendar({
                     day.is_today ? "今日" : null,
                     colorDescription(day.color),
                     planCount > 0 ? `完了目標 ${planCount}件` : null,
+                    day.has_reservation ? "来塾予約あり" : null,
                   ]
                     .filter(Boolean)
                     .join("、");
@@ -237,6 +263,12 @@ export default function StudyCalendar({
                     >
                       {parseDate(day.date).day}
                     </span>
+                    {day.has_reservation && (
+                      <span
+                        className="absolute bottom-1 left-1 h-2.5 w-2.5 rounded-full border border-white bg-green-500"
+                        aria-hidden="true"
+                      />
+                    )}
                     {planCount > 0 && (
                       <span
                         className="absolute bottom-1 right-1 h-2.5 w-2.5 rounded-full border border-white bg-red-500"
@@ -265,6 +297,9 @@ export default function StudyCalendar({
         </span>
         <span className="inline-flex items-center gap-1">
           <span className="inline-block h-2.5 w-2.5 rounded-full bg-red-500" /> <Ft>完了目標日</Ft>
+        </span>
+        <span className="inline-flex items-center gap-1">
+          <span className="inline-block h-2.5 w-2.5 rounded-full bg-green-500" /> <Ft>来塾予約</Ft>
         </span>
       </div>
     </div>

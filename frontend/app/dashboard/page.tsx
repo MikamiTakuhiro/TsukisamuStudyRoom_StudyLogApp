@@ -13,6 +13,7 @@ import {
   academicApi,
   attendanceApi,
   notificationsApi,
+  type CalendarReservation,
   type CalendarTargetPlan,
   type CalendarWeek,
   type NotificationItem,
@@ -69,7 +70,27 @@ export default function DashboardPage() {
     date: string;
     lines: string[];
     targetPlans: CalendarTargetPlan[];
+    reservations: CalendarReservation[];
   } | null>(null);
+  /** カレンダーのスクロール中は記録ボタンを半透明にする */
+  const [calendarScrolling, setCalendarScrolling] = useState(false);
+  // ページ内のどこかがスクロールしている間（カレンダー内・ページ全体とも）、記録ボタンを半透明にする。
+  // scroll イベントはバブルしないため capture で拾う。
+  useEffect(() => {
+    let timer: number | null = null;
+    const onScroll = () => {
+      setCalendarScrolling(true);
+      if (timer != null) window.clearTimeout(timer);
+      timer = window.setTimeout(() => setCalendarScrolling(false), 250);
+    };
+    // scroll は環境によって拾えないことがあるため、ホイール・タッチ操作も合わせて検知する
+    const events = ["scroll", "wheel", "touchmove"] as const;
+    for (const type of events) document.addEventListener(type, onScroll, { capture: true, passive: true });
+    return () => {
+      for (const type of events) document.removeEventListener(type, onScroll, true);
+      if (timer != null) window.clearTimeout(timer);
+    };
+  }, []);
   const [showStudyModal, setShowStudyModal] = useState(false);
   const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
   const [unitInput, setUnitInput] = useState("");
@@ -259,6 +280,7 @@ export default function DashboardPage() {
               date: day.date,
               lines: day.summary_lines,
               targetPlans: day.target_plans ?? [],
+              reservations: day.reservations ?? [],
             });
           }}
         />
@@ -269,6 +291,7 @@ export default function DashboardPage() {
           type="button"
           onClick={openStudyModal}
           className="fab touch-manipulation"
+          style={{ opacity: calendarScrolling ? 0.2 : 1 }}
           aria-label="学習記録を追加"
         >
           +
@@ -301,6 +324,29 @@ export default function DashboardPage() {
                 </ul>
               </div>
             )}
+            {selectedDay.reservations.length > 0 && (
+              <div className="mt-3">
+                <p className="text-sm font-bold text-[var(--navy)]"><Ft>来塾予約</Ft></p>
+                <ul className="mt-2 space-y-2">
+                  {selectedDay.reservations.map((r) => (
+                    <li key={r.reservation_id}>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedDay(null);
+                          router.push(`/reservations?reservation=${r.reservation_id}`);
+                        }}
+                        className="w-full rounded-xl border-2 border-green-500/60 bg-green-50 p-3 text-left text-sm font-medium text-black touch-manipulation"
+                      >
+                        <span className="mr-2 inline-block h-2 w-2 rounded-full bg-green-500 align-middle" />
+                        {r.start_time}〜{r.end_time}
+                        <span className="mt-1 block text-xs font-bold text-[var(--navy)]"><Ft>来塾予約を確認する →</Ft></span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
             {selectedDay.targetPlans.length > 0 && (
               <div className="mt-3">
                 <p className="text-sm font-bold text-[var(--navy)]"><Ft>完了目標</Ft></p>
@@ -324,7 +370,7 @@ export default function DashboardPage() {
                 </ul>
               </div>
             )}
-            {selectedDay.lines.length === 0 && selectedDay.targetPlans.length === 0 && (
+            {selectedDay.lines.length === 0 && selectedDay.reservations.length === 0 && selectedDay.targetPlans.length === 0 && (
               <p className="mt-3 text-black"><Ft>この日の記録はありません</Ft></p>
             )}
             <button type="button" onClick={() => setSelectedDay(null)} className="btn-secondary mt-4 w-full">

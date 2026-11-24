@@ -88,12 +88,21 @@ export type CalendarTargetPlan = {
   unit: string;
 };
 
+export type CalendarReservation = {
+  reservation_id: number;
+  /** "HH:MM"（日本時間） */
+  start_time: string;
+  end_time: string;
+};
+
 export type CalendarDay = {
   date: string;
   color: string;
   summary_lines: string[];
   target_plans: CalendarTargetPlan[];
   is_today: boolean;
+  has_reservation?: boolean;
+  reservations?: CalendarReservation[];
 };
 
 export type CalendarWeek = {
@@ -206,6 +215,7 @@ export type StudentFullProfile = {
     recorded_at: string;
   }[];
   notifications: NotificationItem[];
+  reservations?: ReservationItem[];
 };
 
 export type AccountExport = {

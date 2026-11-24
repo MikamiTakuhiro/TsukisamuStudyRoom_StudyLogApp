@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
 from app.deps import get_current_user, require_admin
 from app.models.academic import AspirationSchoolHistory, ExamResult, Notification, StudyPlan
-from app.models.attendance import Attendance, DailyStudyRecord, Seat
+from app.models.attendance import Attendance, DailyStudyRecord, Seat, SeatReservation
 from app.models.student import Student
 from app.schemas import (
     AccountExportResponse,
@@ -18,6 +18,7 @@ from app.schemas import (
     ExamResultResponse,
     BroadcastNotificationRequest,
     AdminNotificationResponse,
+    ReservationResponse,
     SeatCreateRequest,
     SeatResponse,
     SeatUpdateRequest,
@@ -35,6 +36,7 @@ from app.services.auth_service import (
     reset_student_passwords,
 )
 from app.routers.academic import _plan_responses
+from app.timezone_utils import now_app
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -150,6 +152,22 @@ async def get_student_full(
         select(Notification).where(Notification.student_id == student_id).order_by(Notification.sent_at.desc())
     )
 
+    res_result = await db.execute(
+        select(SeatReservation)
+        .where(SeatReservation.student_id == student_id, SeatReservation.end_time >= now_app())
+        .order_by(SeatReservation.start_time)
+    )
+    reservations = [
+        ReservationResponse(
+            reservation_id=r.reservation_id,
+            student_id=r.student_id,
+            student_name=student.name,
+            start_time=r.start_time,
+            end_time=r.end_time,
+        )
+        for r in res_result.scalars()
+    ]
+
     attendances = [
         AttendanceResponse(
             attendance_id=a.attendance_id,
@@ -180,6 +198,7 @@ async def get_student_full(
             for r in study.scalars()
         ],
         notifications=list(notif.scalars()),
+        reservations=reservations,
     )
 
 

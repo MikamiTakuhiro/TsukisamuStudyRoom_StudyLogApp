@@ -127,6 +127,21 @@ export default function ReservationsPage() {
     });
   }, [user, reload, toast]);
 
+  // カレンダーの来塾予約から移動してきた場合、その予約を一瞬枠で強調する
+  const focusedRef = useRef(false);
+  useEffect(() => {
+    if (!myReservations || focusedRef.current) return;
+    const id = Number(new URLSearchParams(window.location.search).get("reservation"));
+    if (!id) return;
+    focusedRef.current = true;
+    if (!myReservations.some((r) => r.reservation_id === id)) return;
+    requestAnimationFrame(() => {
+      setHighlightId(id);
+      document.getElementById(`reservation-${id}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+    window.setTimeout(() => setHighlightId(null), 2500);
+  }, [myReservations]);
+
   const timeRangeValid = isValidTimeRange(startTime, endTime);
   const hasFullSlot = availability ? hasFullSlotInRange(availability.slots, startTime, endTime) : false;
   const startIsPast = selectedDate === today && timeToMinutes(startTime) < nowMinutesJst();
@@ -299,6 +314,7 @@ export default function ReservationsPage() {
               {myReservations.map((r) => (
                 <li
                   key={r.reservation_id}
+                  id={`reservation-${r.reservation_id}`}
                   className={`flex flex-wrap items-center justify-between gap-2 rounded-xl border-2 bg-[var(--surface)] p-3 transition-shadow ${
                     highlightId === r.reservation_id ? "border-[var(--navy)] study-plan-focus" : "border-[var(--border)]"
                   }`}

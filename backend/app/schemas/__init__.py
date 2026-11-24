@@ -289,6 +289,7 @@ class StudentFullProfile(BaseModel):
     attendances: list[AttendanceResponse]
     study_records: list[StudyRecordResponse]
     notifications: list[NotificationResponse]
+    reservations: list["ReservationResponse"] = []
 
 
 StudyPlanResponse.model_rebuild()
@@ -300,12 +301,20 @@ class CalendarTargetPlan(BaseModel):
     unit: str
 
 
+class CalendarReservation(BaseModel):
+    reservation_id: int
+    start_time: str
+    end_time: str
+
+
 class CalendarDay(BaseModel):
     date: date
     color: str
     summary_lines: list[str]
     target_plans: list[CalendarTargetPlan] = []
     is_today: bool = False
+    has_reservation: bool = False
+    reservations: list[CalendarReservation] = []
 
 
 class CalendarWeek(BaseModel):
@@ -378,3 +387,6 @@ class DayAvailabilityResponse(BaseModel):
     total_seats: int
     slots: list[AvailabilitySlot]
     reservations: list[ReservationResponse]
+
+
+StudentFullProfile.model_rebuild()
