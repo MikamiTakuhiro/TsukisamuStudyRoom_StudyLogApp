@@ -8,12 +8,13 @@ from sqlalchemy.orm import selectinload
 from app.database import get_db
 from app.deps import get_current_user, require_admin, require_writable
 from app.models.academic import StudyPlan
-from app.models.attendance import Attendance, DailyStudyRecord, Seat
+from app.models.attendance import Attendance, DailyStudyRecord, Seat, SeatReservation
 from app.models.student import Student
 from app.schemas import (
     ActiveSeatStatus,
     AttendanceResponse,
     AttendanceUpdateRequest,
+    CalendarReservation,
     CalendarTargetPlan,
     CalendarWeek,
     CheckInRequest,
@@ -25,7 +26,7 @@ from app.schemas import (
     AttendanceVisitItem,
     MonthlyAttendanceStats,
 )
-from app.services.auth_service import resolve_effective_student_id
+from app.services.auth_service import is_admin_user, resolve_effective_student_id
 from app.timezone_utils import app_date, ensure_aware_as_app, format_time_app, now_app, today_app
 
 router = APIRouter(prefix="/attendance", tags=["attendance"])
@@ -347,6 +348,19 @@ async def study_calendar(
     )
     plans = plans_result.scalars().unique().all()
 
+    # 来塾予約（終了前のもののみ。予約の終了後はカレンダーから消える）
+    res_result = await db.execute(
+        select(SeatReservation)
+        .where(
+            SeatReservation.student_id == student_id,
+            SeatReservation.end_time >= now_app(),
+        )
+        .order_by(SeatReservation.start_time)
+    )
+    reservations_by_date: dict[date, list[SeatReservation]] = {}
+    for res in res_result.scalars():
+        reservations_by_date.setdefault(app_date(res.start_time), []).append(res)
+
     target_by_date: dict[date, list[CalendarTargetPlan]] = {}
     for plan in plans:
         completed = any(pt.completion_date is not None for pt in plan.progress_entries)
@@ -369,7 +383,11 @@ async def study_calendar(
     current_week_start = _week_start_sunday(today)
     calendar_weeks: list[CalendarWeek] = []
 
-    for w in range(weeks):
+    # 今日から5週間先までの週も表示する
+    last_future_week_start = _week_start_sunday(today + timedelta(days=35))
+    future_weeks = (last_future_week_start - current_week_start).days // 7
+
+    for w in range(-future_weeks, weeks):
         week_start = current_week_start - timedelta(weeks=w)
         days = []
         for i in range(7):
@@ -405,9 +423,19 @@ async def study_calendar(
                     t = _format_time(s.recorded_at)
                     lines.append(f"家 {t} ({s.subject} {s.topic_unit})")
 
+            day_reservations = reservations_by_date.get(d, [])
             days.append(
                 CalendarDay(
                     date=d,
+                    has_reservation=len(day_reservations) > 0,
+                    reservations=[
+                        CalendarReservation(
+                            reservation_id=res.reservation_id,
+                            start_time=_format_time(res.start_time),
+                            end_time=_format_time(res.end_time),
+                        )
+                        for res in day_reservations
+                    ],
                     color=color,
                     summary_lines=lines,
                     target_plans=target_by_date.get(d, []),
@@ -417,12 +445,13 @@ async def study_calendar(
 
         calendar_weeks.append(CalendarWeek(week_start=week_start, days=days))
 
-    return list(reversed(calendar_weeks))
+    calendar_weeks.sort(key=lambda cw: cw.week_start)
+    return calendar_weeks
 
 
 @router.get("/live", response_model=list[ActiveSeatStatus])
 async def live_status(
-    _: Student = Depends(get_current_user),
+    user: Student = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     seats_result = await db.execute(select(Seat).order_by(Seat.seat_name))
@@ -435,16 +464,28 @@ async def live_status(
     )
     active_map = {seat.seat_id: (att, student) for att, student, seat in active_result.all()}
 
-    return [
-        ActiveSeatStatus(
-            seat_id=seat.seat_id,
-            seat_name=seat.seat_name,
-            student_name=active_map[seat.seat_id][1].name if seat.seat_id in active_map else None,
-            user_id=active_map[seat.seat_id][1].user_id if seat.seat_id in active_map else None,
-            check_in_time=active_map[seat.seat_id][0].check_in_time if seat.seat_id in active_map else None,
+    # 生徒・保護者には他の生徒の氏名・ID を返さない（自分の席かどうかのみ）
+    is_admin = is_admin_user(user)
+    my_student_id = resolve_effective_student_id(user)
+
+    statuses: list[ActiveSeatStatus] = []
+    for seat in seats:
+        active = active_map.get(seat.seat_id)
+        att, student = active if active else (None, None)
+        is_mine = student is not None and student.student_id == my_student_id
+        show_identity = is_admin or is_mine
+        statuses.append(
+            ActiveSeatStatus(
+                seat_id=seat.seat_id,
+                seat_name=seat.seat_name,
+                is_occupied=student is not None,
+                is_mine=is_mine,
+                student_name=student.name if student and show_identity else None,
+                user_id=student.user_id if student and show_identity else None,
+                check_in_time=att.check_in_time if att else None,
+            )
         )
-        for seat in seats
-    ]
+    return statuses
 
 
 @router.patch("/{attendance_id}", response_model=AttendanceResponse)

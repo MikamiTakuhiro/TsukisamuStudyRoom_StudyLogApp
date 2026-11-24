@@ -9,19 +9,26 @@ export default function AppHeader({
   onMenuClick,
   isReadOnly = false,
   role,
+  activeSeat,
 }: {
   title: string;
   showMenu?: boolean;
   onMenuClick?: () => void;
   isReadOnly?: boolean;
   role?: string;
+  activeSeat?: string | null;
 }) {
   return (
     <header className="sticky top-0 z-40 border-b-2 border-[var(--navy)] bg-white px-4 py-3">
       <div className="app-shell flex w-full items-center justify-between px-4">
-        <div>
-          <p className="text-xs font-bold text-[var(--navy)]"><Ft>月寒学習室</Ft></p>
-          <h1 className="text-lg font-bold text-black"><Ft>{title}</Ft></h1>
+        <div className="flex items-center gap-3">
+          <div>
+            <p className="text-xs font-bold text-[var(--navy)]"><Ft>月寒学習室</Ft></p>
+            <h1 className="text-lg font-bold text-black"><Ft>{title}</Ft></h1>
+          </div>
+          {activeSeat && (
+            <div className="badge-active shrink-0"><Ft>入室中</Ft>: {activeSeat}</div>
+          )}
         </div>
         <div className="flex items-center gap-2">
           {role === "admin" && !showMenu && (
@@ -46,11 +53,14 @@ export default function AppHeader({
           )}
         </div>
       </div>
-      {isReadOnly && (
-        <p className="app-shell mt-1 w-full px-4 text-center text-xs font-bold text-[var(--navy)]">
-          <Ft>保護者モード（閲覧専用）</Ft>
-        </p>
-      )}
-    </header>
+
+      {
+        isReadOnly && (
+          <p className="app-shell mt-1 w-full px-4 text-center text-xs font-bold text-[var(--navy)]">
+            <Ft>保護者モード（閲覧専用）</Ft>
+          </p>
+        )
+      }
+    </header >
   );
 }

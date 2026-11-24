@@ -15,6 +15,8 @@ class UserResponse(BaseModel):
     student_id: int
     user_id: str
     name: str
+    last_name: str | None = None
+    first_name: str | None = None
     grade: int
     gender: str
     role: str
@@ -161,6 +163,8 @@ class BroadcastNotificationRequest(BaseModel):
 class ActiveSeatStatus(BaseModel):
     seat_id: int
     seat_name: str
+    is_occupied: bool = False
+    is_mine: bool = False
     student_name: str | None
     user_id: str | None
     check_in_time: datetime | None
@@ -260,6 +264,8 @@ class ExamResultFullResponse(ExamResultResponse):
 
 class StudentUpdateRequest(BaseModel):
     name: str | None = None
+    last_name: str | None = None
+    first_name: str | None = None
     grade: int | None = Field(default=None, ge=1, le=12)
     gender: str | None = None
     phone: str | None = None
@@ -283,6 +289,7 @@ class StudentFullProfile(BaseModel):
     attendances: list[AttendanceResponse]
     study_records: list[StudyRecordResponse]
     notifications: list[NotificationResponse]
+    reservations: list["ReservationResponse"] = []
 
 
 StudyPlanResponse.model_rebuild()
@@ -294,12 +301,20 @@ class CalendarTargetPlan(BaseModel):
     unit: str
 
 
+class CalendarReservation(BaseModel):
+    reservation_id: int
+    start_time: str
+    end_time: str
+
+
 class CalendarDay(BaseModel):
     date: date
     color: str
     summary_lines: list[str]
     target_plans: list[CalendarTargetPlan] = []
     is_today: bool = False
+    has_reservation: bool = False
+    reservations: list[CalendarReservation] = []
 
 
 class CalendarWeek(BaseModel):
@@ -335,6 +350,8 @@ class AttendanceSummaryResponse(BaseModel):
 
 
 class ReservationCreateRequest(BaseModel):
+    # 管理者が生徒に代わって予約する場合のみ指定
+    student_id: int | None = None
     reservation_date: date
     start_time: str = Field(pattern=r"^\d{2}:\d{2}$")
     end_time: str = Field(pattern=r"^\d{2}:\d{2}$")
@@ -370,3 +387,6 @@ class DayAvailabilityResponse(BaseModel):
     total_seats: int
     slots: list[AvailabilitySlot]
     reservations: list[ReservationResponse]
+
+
+StudentFullProfile.model_rebuild()

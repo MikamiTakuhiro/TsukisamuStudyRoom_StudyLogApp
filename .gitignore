@@ -5,16 +5,34 @@ frontend/.env.local
 
 # Python
 backend/.venv
-backend/__pycache__
-backend/.env
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Env（サンプルは管理対象）
+.env
+.env.*
+!.env.example
 
 # Supabase
 supabase/.branches
 supabase/.temp
+supabase/snippets/
+
+# Logs
+*.log
 
 # OS
 .DS_Store
 
-# IDE
+# IDE / エディタ・AI ツールのローカル設定
 .idea
 .vscode
+.cursor/*.log
+.claude/settings.local.json

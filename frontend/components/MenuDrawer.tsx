@@ -14,6 +14,7 @@ const LINKS: { href: string; label: string; icon: MenuNavIconName }[] = [
   { href: "/aspirations", label: "志望校", icon: "aspirations" },
   { href: "/study-plans", label: "学習計画", icon: "study-plans" },
   { href: "/exams", label: "模試結果", icon: "exams" },
+  { href: "/attendance", label: "来塾記録", icon: "attendance" },
   { href: "/profile", label: "プロフィール", icon: "profile" },
 ];
 

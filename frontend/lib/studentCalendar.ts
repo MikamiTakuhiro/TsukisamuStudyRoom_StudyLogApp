@@ -1,4 +1,4 @@
-import type { CalendarTargetPlan, CalendarWeek, StudentFullProfile } from "@/lib/api";
+import type { CalendarReservation, CalendarTargetPlan, CalendarWeek, StudentFullProfile } from "@/lib/api";
 import { formatTimeJa } from "@/lib/utils";
 
 const APP_TIMEZONE = "Asia/Tokyo";
@@ -68,11 +68,31 @@ export function buildCalendarWeeksFromProfile(profile: StudentFullProfile, weeks
     targetByDate.set(date, list);
   }
 
+  const reservationsByDate = new Map<string, CalendarReservation[]>();
+  const nowMs = Date.now();
+  for (const reservation of profile.reservations ?? []) {
+    // 終了済みの予約は表示しない
+    if (new Date(reservation.end_time).getTime() < nowMs) continue;
+    const date = dateKeyInAppTz(reservation.start_time);
+    const list = reservationsByDate.get(date) ?? [];
+    list.push({
+      reservation_id: reservation.reservation_id,
+      start_time: formatTimeJa(reservation.start_time),
+      end_time: formatTimeJa(reservation.end_time),
+    });
+    reservationsByDate.set(date, list);
+  }
+
   const today = todayInAppTz();
   const currentWeekStart = weekStartSunday(today);
   const calendarWeeks: CalendarWeek[] = [];
+  // 今日から5週間先までの週も表示する
+  const lastFutureWeekStart = weekStartSunday(addDays(today, 35));
+  const futureWeeks = Math.round(
+    (parseDateKey(lastFutureWeekStart).getTime() - parseDateKey(currentWeekStart).getTime()) / (7 * 86400000),
+  );
 
-  for (let weekOffset = 0; weekOffset < weeks; weekOffset += 1) {
+  for (let weekOffset = -futureWeeks; weekOffset < weeks; weekOffset += 1) {
     const weekStart = addDays(currentWeekStart, -7 * weekOffset);
     const days = [];
 
@@ -114,6 +134,8 @@ export function buildCalendarWeeksFromProfile(profile: StudentFullProfile, weeks
         summary_lines: summaryLines,
         target_plans: targetByDate.get(date) ?? [],
         is_today: date === today,
+        has_reservation: (reservationsByDate.get(date) ?? []).length > 0,
+        reservations: reservationsByDate.get(date) ?? [],
       });
     }
 

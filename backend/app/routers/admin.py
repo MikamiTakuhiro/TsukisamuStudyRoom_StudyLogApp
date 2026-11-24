@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
 from app.deps import get_current_user, require_admin
 from app.models.academic import AspirationSchoolHistory, ExamResult, Notification, StudyPlan
-from app.models.attendance import Attendance, DailyStudyRecord, Seat
+from app.models.attendance import Attendance, DailyStudyRecord, Seat, SeatReservation
 from app.models.student import Student
 from app.schemas import (
     AccountExportResponse,
@@ -18,6 +18,7 @@ from app.schemas import (
     ExamResultResponse,
     BroadcastNotificationRequest,
     AdminNotificationResponse,
+    ReservationResponse,
     SeatCreateRequest,
     SeatResponse,
     SeatUpdateRequest,
@@ -35,6 +36,7 @@ from app.services.auth_service import (
     reset_student_passwords,
 )
 from app.routers.academic import _plan_responses
+from app.timezone_utils import now_app
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -44,6 +46,8 @@ def _user_response(user: Student) -> UserResponse:
         student_id=user.student_id,
         user_id=user.user_id,
         name=user.name,
+        last_name=user.last_name,
+        first_name=user.first_name,
         grade=user.grade,
         gender=user.gender,
         role=user.role,
@@ -148,6 +152,22 @@ async def get_student_full(
         select(Notification).where(Notification.student_id == student_id).order_by(Notification.sent_at.desc())
     )
 
+    res_result = await db.execute(
+        select(SeatReservation)
+        .where(SeatReservation.student_id == student_id, SeatReservation.end_time >= now_app())
+        .order_by(SeatReservation.start_time)
+    )
+    reservations = [
+        ReservationResponse(
+            reservation_id=r.reservation_id,
+            student_id=r.student_id,
+            student_name=student.name,
+            start_time=r.start_time,
+            end_time=r.end_time,
+        )
+        for r in res_result.scalars()
+    ]
+
     attendances = [
         AttendanceResponse(
             attendance_id=a.attendance_id,
@@ -178,6 +198,7 @@ async def get_student_full(
             for r in study.scalars()
         ],
         notifications=list(notif.scalars()),
+        reservations=reservations,
     )
 
 
@@ -194,8 +215,22 @@ async def update_student(
     student = result.scalar_one_or_none()
     if not student:
         raise HTTPException(status_code=404, detail="生徒が見つかりません")
-    if body.name is not None:
+    if body.last_name is not None or body.first_name is not None:
+        last = (body.last_name if body.last_name is not None else student.last_name or "").strip()
+        first = (body.first_name if body.first_name is not None else student.first_name or "").strip()
+        if not (last or first):
+            raise HTTPException(status_code=400, detail="姓または名を入力してください")
+        student.last_name = last or None
+        student.first_name = first or None
+        student.name = f"{last}{first}"
+    elif body.name is not None:
         student.name = body.name
+    if body.name is not None or body.last_name is not None or body.first_name is not None:
+        parent_result = await db.execute(
+            select(Student).where(Student.linked_student_id == student.student_id, Student.role == "parent")
+        )
+        for parent in parent_result.scalars():
+            parent.name = f"{student.name} 保護者"
     if body.grade is not None:
         student.grade = body.grade
     if body.gender is not None:

@@ -1,7 +1,7 @@
 from datetime import date, datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
@@ -16,7 +16,7 @@ from app.schemas import (
     ReservationUpdateRequest,
 )
 from app.services.auth_service import is_admin_user, resolve_effective_student_id
-from app.timezone_utils import APP_TZ, app_date, combine_date_time_app, now_app
+from app.timezone_utils import APP_TZ, app_date, combine_date_time_app, now_app, today_app
 
 router = APIRouter(prefix="/reservations", tags=["reservations"])
 
@@ -34,6 +34,14 @@ def _reservation_response(res: SeatReservation, student_name: str | None = None)
         start_time=res.start_time,
         end_time=res.end_time,
     )
+
+
+async def _purge_past_reservations(db: AsyncSession) -> None:
+    """予約日が前日以前（終了時刻が当日0時より前）の予約を削除し、当日分までを残す。"""
+    today = today_app()
+    cutoff = datetime(today.year, today.month, today.day, 0, 0, tzinfo=APP_TZ)
+    await db.execute(delete(SeatReservation).where(SeatReservation.end_time < cutoff))
+    await db.commit()
 
 
 async def _total_seats(db: AsyncSession) -> int:
@@ -148,6 +156,7 @@ async def my_reservations(
     user: Student = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    await _purge_past_reservations(db)
     student_id = resolve_effective_student_id(user)
     result = await db.execute(
         select(SeatReservation, Student.name)
@@ -168,6 +177,7 @@ async def all_reservations(
     _: Student = Depends(require_admin),
     db: AsyncSession = Depends(get_db),
 ):
+    await _purge_past_reservations(db)
     q = (
         select(SeatReservation, Student.name)
         .join(Student, Student.student_id == SeatReservation.student_id)
@@ -196,12 +206,23 @@ async def create_reservation(
 
     await _validate_capacity(db, start, end)
 
-    student_id = resolve_effective_student_id(user)
+    target = user
+    if body.student_id is not None and body.student_id != user.student_id:
+        if not is_admin_user(user):
+            raise HTTPException(status_code=403, detail="他の生徒の予約は作成できません")
+        found = await db.get(Student, body.student_id)
+        if not found or found.role != "student":
+            raise HTTPException(status_code=404, detail="生徒が見つかりません")
+        target = found
+    elif is_admin_user(user):
+        raise HTTPException(status_code=400, detail="予約する生徒を指定してください")
+
+    student_id = resolve_effective_student_id(target)
     res = SeatReservation(student_id=student_id, start_time=start, end_time=end)
     db.add(res)
     await db.commit()
     await db.refresh(res)
-    return _reservation_response(res, user.name)
+    return _reservation_response(res, target.name)
 
 
 @router.patch("/{reservation_id}", response_model=ReservationResponse)

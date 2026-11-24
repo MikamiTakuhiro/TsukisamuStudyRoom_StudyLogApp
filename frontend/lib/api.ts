@@ -17,6 +17,8 @@ export type User = {
   student_id: number;
   user_id: string;
   name: string;
+  last_name?: string | null;
+  first_name?: string | null;
   grade: number;
   gender: string;
   role: "student" | "admin" | "parent";
@@ -37,6 +39,11 @@ export type LoginResponse = {
 export type ActiveSeatStatus = {
   seat_id: number;
   seat_name: string;
+  /** 使用中か（生徒・保護者には他の生徒の氏名は返らないため、こちらで判定する） */
+  is_occupied: boolean;
+  /** 自分（保護者の場合は紐づく生徒）が使っている席か */
+  is_mine: boolean;
+  /** 管理者、または自分の席のときのみ値が入る */
   student_name: string | null;
   user_id: string | null;
   check_in_time: string | null;
@@ -81,12 +88,21 @@ export type CalendarTargetPlan = {
   unit: string;
 };
 
+export type CalendarReservation = {
+  reservation_id: number;
+  /** "HH:MM"（日本時間） */
+  start_time: string;
+  end_time: string;
+};
+
 export type CalendarDay = {
   date: string;
   color: string;
   summary_lines: string[];
   target_plans: CalendarTargetPlan[];
   is_today: boolean;
+  has_reservation?: boolean;
+  reservations?: CalendarReservation[];
 };
 
 export type CalendarWeek = {
@@ -199,6 +215,7 @@ export type StudentFullProfile = {
     recorded_at: string;
   }[];
   notifications: NotificationItem[];
+  reservations?: ReservationItem[];
 };
 
 export type AccountExport = {
@@ -269,7 +286,7 @@ export const attendanceApi = {
 export const reservationsApi = {
   availability: (date: string) => apiFetch<DayAvailability>(`/api/reservations/availability?date=${date}`),
   mine: () => apiFetch<ReservationItem[]>("/api/reservations/mine"),
-  create: (data: { reservation_date: string; start_time: string; end_time: string }) =>
+  create: (data: { student_id?: number; reservation_date: string; start_time: string; end_time: string }) =>
     apiFetch<ReservationItem>("/api/reservations", { method: "POST", body: JSON.stringify(data) }),
   update: (id: number, data: { reservation_date?: string; start_time?: string; end_time?: string }) =>
     apiFetch<ReservationItem>(`/api/reservations/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
@@ -343,6 +360,8 @@ export const adminApi = {
     id: number,
     data: {
       name?: string;
+      last_name?: string;
+      first_name?: string;
       grade?: number;
       gender?: string;
       phone?: string | null;
