@@ -33,6 +33,7 @@ import { dedupeLatestPerDate } from "@/lib/aspirations";
 import { buildCalendarWeeksFromProfile } from "@/lib/studentCalendar";
 import { buildStudentHistoryRows, buildVisitNumberMap, downloadStudentHistoryCsv, attendanceDurationMinutes } from "@/lib/studentHistoryExport";
 import { formatDateJa, formatTimeJa } from "@/lib/utils";
+import { adminStudentPath } from "@/lib/adminPaths";
 
 export default function StudentAnalyticsDashboard({ profile }: { profile: StudentFullProfile }) {
   const [selectedDay, setSelectedDay] = useState<{
@@ -236,7 +237,7 @@ export default function StudentAnalyticsDashboard({ profile }: { profile: Studen
       </div>
 
       <div className="flex flex-wrap gap-2">
-        <Link href={`/admin/students/${profile.student.student_id}`} className="btn-secondary text-sm">
+        <Link href={adminStudentPath(profile.student.student_id)} className="btn-secondary text-sm">
           詳細データを編集
         </Link>
       </div>

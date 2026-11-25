@@ -8,6 +8,7 @@ import { useAdminProfiles } from "@/lib/useAdminProfiles";
 import { useRequireAdmin } from "@/lib/useRequireAdmin";
 import { gradeLabel } from "@/lib/grades";
 import { downloadAllStudentsHistoryCsv } from "@/lib/studentHistoryExport";
+import { adminStudentAnalyticsPath } from "@/lib/adminPaths";
 
 export default function AdminAnalyticsPage() {
   const { ready } = useRequireAdmin();
@@ -79,7 +80,7 @@ export default function AdminAnalyticsPage() {
                   <p className="font-bold text-black">{s.name}</p>
                   <p className="text-sm text-black">{gradeLabel(s.grade)}</p>
                 </div>
-                <Link href={`/admin/analytics/students/${s.student_id}`} className="btn-primary text-sm">
+                <Link href={adminStudentAnalyticsPath(s.student_id)} className="btn-primary text-sm">
                   グラフを見る
                 </Link>
               </li>

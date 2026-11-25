@@ -6,6 +6,7 @@ import { AnalyticsBarChart, AnalyticsLineChart } from "@/components/admin/Analyt
 import { dailyStudyRecordCounts, locationStudyCounts, subjectStudyCounts } from "@/lib/adminAnalytics";
 import { useAdminProfiles } from "@/lib/useAdminProfiles";
 import { useRequireAdmin } from "@/lib/useRequireAdmin";
+import { adminStudentAnalyticsPath } from "@/lib/adminPaths";
 
 export default function AdminStudyAnalyticsPage() {
   const { ready } = useRequireAdmin();
@@ -34,7 +35,7 @@ export default function AdminStudyAnalyticsPage() {
           <section key={p.student.student_id} className="card space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <h2 className="text-lg font-bold text-black">{p.student.name}</h2>
-              <Link href={`/admin/analytics/students/${p.student.student_id}`} className="btn-secondary text-sm">
+              <Link href={adminStudentAnalyticsPath(p.student.student_id)} className="btn-secondary text-sm">
                 統合分析
               </Link>
             </div>

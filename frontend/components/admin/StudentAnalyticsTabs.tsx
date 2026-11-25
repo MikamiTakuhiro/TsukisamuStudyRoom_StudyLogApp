@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef } from "react";
 import type { User } from "@/lib/api";
 import { saveAnalyticsScrollPosition } from "@/lib/analyticsScroll";
+import { adminStudentAnalyticsPath } from "@/lib/adminPaths";
 
 export default function StudentAnalyticsTabs({
   students,
@@ -28,7 +29,7 @@ export default function StudentAnalyticsTabs({
   function selectStudent(studentId: number) {
     if (studentId === currentId) return;
     saveAnalyticsScrollPosition();
-    router.push(`/admin/analytics/students/${studentId}`, { scroll: false });
+    router.push(adminStudentAnalyticsPath(studentId), { scroll: false });
   }
 
   return (

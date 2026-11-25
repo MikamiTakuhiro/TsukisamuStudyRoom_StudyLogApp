@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import AdminShell from "@/components/AdminShell";
 import { Input, Label, Select, EmptyState } from "@/components/ui/Input";
 import {
@@ -16,10 +16,20 @@ import {
 import { GRADE_OPTIONS } from "@/lib/grades";
 import { useRequireAdmin } from "@/lib/useRequireAdmin";
 import { formatTimeJa, toDatetimeLocalJst, datetimeLocalJstToIso } from "@/lib/utils";
+import { adminStudentAnalyticsPath } from "@/lib/adminPaths";
 
 export default function AdminStudentDetailPage() {
-  const { id } = useParams<{ id: string }>();
-  const studentId = Number(id);
+  // useSearchParams は静的書き出し時に Suspense で包む必要がある
+  return (
+    <Suspense fallback={null}>
+      <AdminStudentDetailContent />
+    </Suspense>
+  );
+}
+
+function AdminStudentDetailContent() {
+  const searchParams = useSearchParams();
+  const studentId = Number(searchParams.get("id"));
   const { ready } = useRequireAdmin();
   const [profile, setProfile] = useState<StudentFullProfile | null>(null);
   const [saved, setSaved] = useState("");
@@ -29,7 +39,7 @@ export default function AdminStudentDetailPage() {
   }
 
   useEffect(() => {
-    if (ready) reload().catch(console.error);
+    if (ready && studentId) reload().catch(console.error);
   }, [ready, studentId]);
 
   const [studentForm, setStudentForm] = useState({ last_name: "", first_name: "", grade: 1, gender: "未回答" });
@@ -73,7 +83,7 @@ export default function AdminStudentDetailPage() {
           <Link href="/admin?tab=students" className="font-bold text-[var(--navy)] underline">
             ← 生徒管理
           </Link>
-          <Link href={`/admin/analytics/students/${studentId}`} className="btn-primary text-sm">
+          <Link href={adminStudentAnalyticsPath(studentId)} className="btn-primary text-sm">
             分析グラフ
           </Link>
         </div>
