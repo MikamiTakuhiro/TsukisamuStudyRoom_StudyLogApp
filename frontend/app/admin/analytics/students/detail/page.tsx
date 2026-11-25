@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useState } from "react";
+import { Suspense, useEffect, useLayoutEffect, useState } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import AdminShell from "@/components/AdminShell";
 import StudentAnalyticsDashboard from "@/components/admin/StudentAnalyticsDashboard";
 import StudentAnalyticsTabs from "@/components/admin/StudentAnalyticsTabs";
@@ -12,8 +12,17 @@ import { useRequireAdmin } from "@/lib/useRequireAdmin";
 import { gradeLabel } from "@/lib/grades";
 
 export default function AdminStudentAnalyticsDetailPage() {
-  const { id } = useParams<{ id: string }>();
-  const studentId = Number(id);
+  // useSearchParams は静的書き出し時に Suspense で包む必要がある
+  return (
+    <Suspense fallback={null}>
+      <AdminStudentAnalyticsDetailContent />
+    </Suspense>
+  );
+}
+
+function AdminStudentAnalyticsDetailContent() {
+  const searchParams = useSearchParams();
+  const studentId = Number(searchParams.get("id"));
   const { ready } = useRequireAdmin();
   const [students, setStudents] = useState<User[]>([]);
   const [profile, setProfile] = useState<StudentFullProfile | null>(null);

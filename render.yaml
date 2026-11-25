@@ -1,10 +1,14 @@
-# Render Blueprint（バックエンド FastAPI）
+# Render Blueprint（参考用）
+# 実際のサービスは Render ダッシュボードから手動で作成している。
+# この内容は各サービスの設定値の控え。Blueprint として適用すると
+# 同名の新しいサービスが作られる可能性があるので注意。
 services:
+  # バックエンド（FastAPI）
   - type: web
-    name: tsukisamu-studylog-api
+    name: tsukisamu-api
     runtime: python
     plan: free
-    region: singapore          # Supabase (ap-southeast-1) と同じリージョン
+    region: singapore
     rootDir: backend
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
@@ -19,6 +23,20 @@ services:
       # Supabase の Session pooler（ポート 5432）。postgresql+asyncpg:// に書き換えて設定
       - key: DATABASE_URL
         sync: false
-      # Netlify の URL（例 https://xxxx.netlify.app）。複数はカンマ区切り
+      # フロント（Static Site）の URL。複数はカンマ区切り。末尾スラッシュなし
       - key: CORS_ORIGINS
         sync: false
+
+  # フロントエンド（Next.js を静的書き出しして配信）
+  - type: web
+    name: tsukisamu-web
+    runtime: static
+    rootDir: frontend
+    buildCommand: npm ci && npm run build
+    staticPublishPath: out
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      # ビルド時に画面のコードへ埋め込まれる。変更したら再デプロイが必要
+      - key: NEXT_PUBLIC_API_BASE_URL
+        value: https://tsukisamu-api.onrender.com

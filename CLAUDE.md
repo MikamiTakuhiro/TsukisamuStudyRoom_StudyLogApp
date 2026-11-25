@@ -91,7 +91,8 @@ TsukisamuStudyRoom_StudyLogApp/
 
 - 認証: `/`（→ `/login` へ redirect）、`/login`
 - 生徒/保護者: `/dashboard`（ホーム・タイムライン）、`/scan`（QR 入退室）、`/reservations`、`/study-plans`、`/aspirations`、`/exams`、`/attendance`、`/live`、`/profile`、`/menu`
-- 管理者（`/admin` 配下）: `/admin`（生徒登録・座席/QR・出席状況）、`/admin/reservations`（予約カレンダー）、`/admin/students/[id]`、`/admin/profile`、`/admin/analytics/*`（`page`・`students`・`students/[id]`・`attendance`・`study`・`exams`）
+- 管理者（`/admin` 配下）: `/admin`（生徒登録・座席/QR・出席状況）、`/admin/reservations`（予約カレンダー）、`/admin/students/detail?id=`、`/admin/profile`、`/admin/analytics/*`（`page`・`students`・`students/detail?id=`・`attendance`・`study`・`exams`）
+- 静的書き出し（`next.config.ts` の `output: "export"`）で Render Static Site に配信している。`[id]` のような実行時に決まる動的ルート・サーバー側の `redirect`・Route Handler・Server Actions・`next/image` の既定ローダーは使えない。生徒個別ページへのパスは `lib/adminPaths.ts` のヘルパーで作る。
 
 ### lib（主要ファイル）
 

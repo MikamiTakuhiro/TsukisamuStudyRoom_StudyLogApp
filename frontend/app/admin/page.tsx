@@ -18,6 +18,7 @@ import { GRADE_OPTIONS, gradeLabel } from "@/lib/grades";
 import { useRequireAdmin } from "@/lib/useRequireAdmin";
 import { filterStudentsBySearch } from "@/lib/studentSearch";
 import { buildAccountInfoText, downloadTextFile } from "@/lib/utils";
+import { adminStudentPath, adminStudentAnalyticsPath } from "@/lib/adminPaths";
 
 type NotificationPreviewItem = AdminNotificationItem & {
   recipients: { student_id: number; student_name: string; user_id: string }[];
@@ -342,7 +343,7 @@ function AdminPageContent() {
                 {filterStudentsBySearch(students, studentQuery).map((s) => (
                   <tr key={s.student_id}>
                     <td>
-                      <Link href={`/admin/students/${s.student_id}`} className="font-bold text-[var(--navy)] underline">
+                      <Link href={adminStudentPath(s.student_id)} className="font-bold text-[var(--navy)] underline">
                         {s.name}
                       </Link>
                     </td>
@@ -350,10 +351,10 @@ function AdminPageContent() {
                     <td className="whitespace-nowrap">{gradeLabel(s.grade)}</td>
                     <td>
                       <div className="flex flex-wrap gap-2">
-                        <Link href={`/admin/analytics/students/${s.student_id}`} className="btn-primary btn-sm">
+                        <Link href={adminStudentAnalyticsPath(s.student_id)} className="btn-primary btn-sm">
                           分析グラフ
                         </Link>
-                        <Link href={`/admin/students/${s.student_id}`} className="btn-secondary btn-sm">
+                        <Link href={adminStudentPath(s.student_id)} className="btn-secondary btn-sm">
                           詳細・編集
                         </Link>
                         <button type="button" onClick={() => downloadAccount(s)} className="btn-accent btn-sm">

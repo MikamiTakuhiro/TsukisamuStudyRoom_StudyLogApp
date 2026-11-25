@@ -126,9 +126,11 @@ npm run dev
 
 ### 本番ビルド
 
+静的書き出し（`output: "export"`）なので、ビルド結果は `frontend/out/` に HTML/CSS/JS として出力されます（`npm run start` は使いません）。
+
 ```bash
 npm run build
-npm run start
+npx serve out   # 手元で本番相当の表示を確認する場合（任意）
 ```
 
 ---
@@ -257,11 +259,14 @@ ngrok http 3000
 
 | サービス | 用途 |
 |---------|------|
-| **Vercel** | フロントエンド（`frontend/`） |
-| **Render** | バックエンド（`uvicorn app.main:app --host 0.0.0.0 --port $PORT`） |
+| **Render（Static Site）** | フロントエンド（`frontend/`、`npm ci && npm run build` → `out/` を配信） |
+| **Render（Web Service）** | バックエンド（`uvicorn app.main:app --host 0.0.0.0 --port $PORT`） |
 | **Supabase** | PostgreSQL + Auth |
 
-環境変数は各ホスティングのダッシュボードで設定してください。
+- フロントの環境変数 `NEXT_PUBLIC_API_BASE_URL` はビルド時に埋め込まれるため、変更したら再デプロイする。
+- バックエンドの `CORS_ORIGINS` にはフロントの URL（末尾スラッシュなし）を設定する。
+- 無料の Web Service は 15 分アクセスがないとスリープするため、外部の定期アクセス（cron-job.org などで `/health` を 10 分ごと）で起こしておく。
+- 各サービスの設定値の控えは `render.yaml` にある。
 
 ---
 

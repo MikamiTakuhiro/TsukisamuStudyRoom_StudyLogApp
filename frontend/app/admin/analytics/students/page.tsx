@@ -10,6 +10,7 @@ import { gradeLabel } from "@/lib/grades";
 import { studyEfficiencyIndex, studyPlanCompletionRate } from "@/lib/adminAnalytics";
 import { filterStudentsBySearch } from "@/lib/studentSearch";
 import { downloadAllStudentsHistoryCsv } from "@/lib/studentHistoryExport";
+import { adminStudentAnalyticsPath } from "@/lib/adminPaths";
 
 export default function AdminStudentsAnalyticsPage() {
   const { ready } = useRequireAdmin();
@@ -99,7 +100,7 @@ export default function AdminStudentsAnalyticsPage() {
                   </p>
                 )}
               </div>
-              <Link href={`/admin/analytics/students/${s.student_id}`} className="btn-primary text-sm">
+              <Link href={adminStudentAnalyticsPath(s.student_id)} className="btn-primary text-sm">
                 統合グラフを見る
               </Link>
             </div>
