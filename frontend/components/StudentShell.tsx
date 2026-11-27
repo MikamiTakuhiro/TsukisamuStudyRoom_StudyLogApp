@@ -8,6 +8,7 @@ import MenuNavIcon, { type MenuNavIconName } from "@/components/MenuNavIcon";
 import MenuDrawer from "@/components/MenuDrawer";
 import { Ft } from "@/components/FuriganaText";
 import { ReadingProvider } from "@/context/ReadingContext";
+import { normalizePathname } from "@/lib/utils";
 import type { User } from "@/lib/api";
 
 const BOTTOM_NAV_ITEMS: {
@@ -37,7 +38,7 @@ export default function StudentShell({
   hideBottomNav?: boolean;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
-  const pathname = usePathname();
+  const pathname = normalizePathname(usePathname());
 
   const header = (
     <AppHeader

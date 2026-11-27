@@ -87,3 +87,13 @@ export function buildAccountInfoText(data: {
   ];
   return lines.join("\n");
 }
+
+/**
+ * パス末尾のスラッシュを取り除く（ルート "/" はそのまま）。
+ * next.config.ts の trailingSlash: true により本番では usePathname() が
+ * "/dashboard/" のように末尾スラッシュ付きで返るため、ナビのアクティブ判定はこれを通して比較する。
+ */
+export function normalizePathname(pathname: string | null | undefined): string {
+  if (!pathname) return "/";
+  return pathname.length > 1 ? pathname.replace(/\/+$/, "") || "/" : pathname;
+}
