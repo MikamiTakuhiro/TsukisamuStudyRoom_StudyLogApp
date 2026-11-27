@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import MenuNavIcon, { type MenuNavIconName } from "@/components/MenuNavIcon";
 import { authApi } from "@/lib/api";
 import { clearSession } from "@/lib/auth";
+import { normalizePathname } from "@/lib/utils";
 
 const NAV_ITEMS: {
   href: string;
@@ -59,7 +60,7 @@ export default function AdminShell({
   title: string;
   children: React.ReactNode;
 }) {
-  const pathname = usePathname();
+  const pathname = normalizePathname(usePathname());
   const router = useRouter();
 
   async function logout() {

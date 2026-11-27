@@ -95,6 +95,33 @@ legend {
     transform 0.15s ease;
 }
 
+/* 日付・時刻入力: iOS Safari ではネイティブ外観が固有の最小幅を持ち、
+   width: 100% を無視して画面外へはみ出すため、外観をリセットして幅を親に合わせる */
+input[type="date"],
+input[type="time"],
+input[type="datetime-local"],
+input[type="month"] {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  -webkit-appearance: none;
+  appearance: none;
+  /* appearance: none で空欄時に高さが潰れないよう、通常の入力欄と同じ高さを確保 */
+  min-height: 3.25rem;
+  line-height: 1.25;
+  text-align: left;
+}
+
+input[type="date"]::-webkit-date-and-time-value,
+input[type="time"]::-webkit-date-and-time-value,
+input[type="datetime-local"]::-webkit-date-and-time-value,
+input[type="month"]::-webkit-date-and-time-value {
+  text-align: left;
+  margin: 0;
+}
+
 .app-input::placeholder,
 .app-textarea::placeholder {
   color: var(--placeholder);
@@ -753,8 +780,10 @@ a.btn-secondary {
 }
 
 .furigana-ruby rt {
-  font-size: 0.32em;
+  /* 親文字の半分（ルビの標準サイズ）。ボトムナビなど小さい文字でも 9px 未満にはしない */
+  font-size: max(0.5em, 0.5625rem);
   font-weight: 600;
+  line-height: 1.1;
   color: var(--navy);
   letter-spacing: 0;
 }
